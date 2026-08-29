@@ -3,8 +3,9 @@ import { useNavigate, Link } from 'react-router-dom'
 import { listObras, progresso, BRL } from '../lib/data'
 import { useAuth } from '../lib/auth'
 
-export const orcadoDe = (o) =>
-  Array.isArray(o.obra_financeiro) ? o.obra_financeiro[0]?.orcado || 0 : o.obra_financeiro?.orcado || 0
+const finDe = (o) => (Array.isArray(o.obra_financeiro) ? o.obra_financeiro[0] : o.obra_financeiro) || {}
+export const orcadoDe = (o) => finDe(o).orcado || 0
+export const metaCustoDe = (o) => finDe(o).meta_custo || 0
 
 function seg(etapas) {
   return (
@@ -24,7 +25,7 @@ function seg(etapas) {
 }
 
 export default function Painel() {
-  const { isAdmin } = useAuth()
+  const { isStaff, papel } = useAuth()
   const nav = useNavigate()
   const [obras, setObras] = useState(null)
   const [err, setErr] = useState('')
@@ -43,19 +44,21 @@ export default function Painel() {
   return (
     <>
       <div className="topbar"><div className="crumb"><b>Painel</b></div>
-        <span className="chip-role">{isAdmin ? 'Administrador' : 'Gestor'}</span></div>
+        <span className="chip-role">{papel === 'admin' ? 'Administrador' : papel === 'gestor' ? 'Gestor' : 'Execução'}</span></div>
       <div className="content">
         <div className="pg-head">
           <div><h1 className="pg">Painel de obras</h1><div className="pg-sub">Obras do Grupo MS</div></div>
-          <Link to="/nova" className="btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>Nova obra
-          </Link>
+          {isStaff && (
+            <Link to="/nova" className="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>Nova obra
+            </Link>
+          )}
         </div>
 
-        <div className="grid-kpi">
+        <div className="grid-kpi" style={{ gridTemplateColumns: isStaff ? '' : 'repeat(3,1fr)' }}>
           <div className="card kpi"><div className="k">Obras ativas</div><div className="v">{ativas}</div><div className="dsc">em andamento</div></div>
           <div className="card kpi"><div className="k">Progresso médio</div><div className="v">{pmed}%</div><div className="dsc">das etapas</div></div>
-          <div className="card kpi"><div className="k">Orçado (total)</div><div className="v">{BRL(orc)}</div><div className="dsc">contratos em curso</div></div>
+          {isStaff && <div className="card kpi"><div className="k">Orçado (total)</div><div className="v">{BRL(orc)}</div><div className="dsc">contratos em curso</div></div>}
           <div className="card kpi"><div className="k">Total de obras</div><div className="v">{obras.length}</div><div className="dsc">cadastradas</div></div>
         </div>
 

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { listObras, progresso } from '../lib/data'
+import { useAuth } from '../lib/auth'
 
 export default function Obras() {
   const nav = useNavigate()
+  const { isStaff } = useAuth()
   const [obras, setObras] = useState(null)
   const [err, setErr] = useState('')
 
@@ -20,9 +22,11 @@ export default function Obras() {
       <div className="content">
         <div className="pg-head">
           <div><h1 className="pg">Obras</h1><div className="pg-sub">{obras.length} cadastradas</div></div>
-          <Link to="/nova" className="btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>Nova obra
-          </Link>
+          {isStaff && (
+            <Link to="/nova" className="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>Nova obra
+            </Link>
+          )}
         </div>
         <div className="obras-grid">
           {obras.map((o) => {

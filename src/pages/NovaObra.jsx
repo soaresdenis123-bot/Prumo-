@@ -7,7 +7,7 @@ export default function NovaObra() {
   const nav = useNavigate()
   const { session, isAdmin } = useAuth()
   const [f, setF] = useState({
-    nome: '', cidade: '', endereco: '', padrao: 'Médio', area_m2: '',
+    nome: '', cidade: '', endereco: '', padrao: 'Médio', area_m2: '', pavimentos: 1,
     cliente_nome: '', cliente_tel: '', cliente_email: '', inicio: '', previsao: '', orcado: '',
   })
   const [gestores, setGestores] = useState([])
@@ -26,7 +26,7 @@ export default function NovaObra() {
     try {
       const id = await createObra({
         nome: f.nome, cidade: f.cidade, endereco: f.endereco, padrao: f.padrao,
-        area_m2: f.area_m2 ? Number(f.area_m2) : null,
+        area_m2: f.area_m2 ? Number(f.area_m2) : null, pavimentos: Number(f.pavimentos) || 1,
         cliente_nome: f.cliente_nome, cliente_tel: f.cliente_tel, cliente_email: f.cliente_email.trim(),
         inicio: f.inicio || null, previsao: f.previsao || null,
         gestor_id: gestorId || session.user.id, criado_por: session.user.id,
@@ -54,6 +54,10 @@ export default function NovaObra() {
               <div className="field"><label>Padrão</label>
                 <select value={f.padrao} onChange={set('padrao')}><option>Médio</option><option>Alto</option><option>Popular</option></select></div>
               <div className="field"><label>Área construída (m²)</label><input type="number" value={f.area_m2} onChange={set('area_m2')} placeholder="150" /></div>
+            </div>
+            <div className="field"><label>Pavimentos</label>
+              <select value={f.pavimentos} onChange={set('pavimentos')}><option value="1">Térrea</option><option value="2">Sobrado (2 pavimentos)</option></select>
+              <div className="muted" style={{ fontSize: 11, marginTop: 5 }}>Define a casa que o cliente vê evoluindo no acompanhamento.</div>
             </div>
             {isAdmin && (
               <div className="field"><label>Gestor responsável</label>

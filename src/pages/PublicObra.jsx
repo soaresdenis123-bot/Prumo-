@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getObraPublica, progresso } from '../lib/data'
 import PlumbMark from '../components/PlumbMark'
+import CasaProgresso from '../components/CasaProgresso'
 
 export default function PublicObra() {
   const { token } = useParams()
@@ -47,6 +48,12 @@ export default function PublicObra() {
             </div>
             <div className="ring" style={{ '--p': p }}><b>{p}%</b></div>
           </div>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <div className="sec-title">Sua casa, sendo construída</div>
+          <CasaProgresso etapas={obra.etapas} pavimentos={obra.pavimentos} />
+          <div className="muted" style={{ fontSize: 12, textAlign: 'center', marginTop: 8 }}>Do esqueleto em steel frame até a chave na mão — a ilustração avança conforme sua obra.</div>
         </div>
 
         <div className="card" style={{ padding: '8px 20px', marginTop: 20 }}>

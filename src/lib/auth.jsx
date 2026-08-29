@@ -37,8 +37,9 @@ export function AuthProvider({ children }) {
     profile,
     loading,
     papel: profile?.papel,
-    isStaff: profile?.papel === 'admin' || profile?.papel === 'gestor',
+    isStaff: profile?.papel === 'admin' || profile?.papel === 'gestor', // acesso financeiro/calc
     isAdmin: profile?.papel === 'admin',
+    isExec: profile?.papel === 'execucao', // conta de campo (só etapas/fotos)
     signOut: () => supabase.auth.signOut(),
   }
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>

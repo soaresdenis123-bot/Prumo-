@@ -7,8 +7,8 @@ export const progresso = (etapas = []) =>
   etapas.length ? Math.round(etapas.reduce((t, e) => t + (e.pct || 0), 0) / etapas.length) : 0
 
 const OBRA_SELECT =
-  'id,nome,cliente_nome,cliente_email,cliente_tel,endereco,cidade,padrao,area_m2,inicio,previsao,status,gestor_id,share_token,' +
-  'etapas(id,ordem,nome,status,pct,obs),obra_financeiro(orcado)'
+  'id,nome,cliente_nome,cliente_email,cliente_tel,endereco,cidade,padrao,area_m2,pavimentos,inicio,previsao,status,gestor_id,share_token,' +
+  'etapas(id,ordem,nome,status,pct,obs),obra_financeiro(orcado,meta_custo)'
 
 export async function listObras() {
   const { data, error } = await supabase
@@ -50,6 +50,14 @@ export async function setOrcado(obraId, valor) {
   const { error } = await supabase
     .from('obra_financeiro')
     .update({ orcado: Number(valor) || 0, atualizado_em: new Date().toISOString() })
+    .eq('obra_id', obraId)
+  if (error) throw error
+}
+
+export async function setMetaCusto(obraId, valor) {
+  const { error } = await supabase
+    .from('obra_financeiro')
+    .update({ meta_custo: Number(valor) || 0, atualizado_em: new Date().toISOString() })
     .eq('obra_id', obraId)
   if (error) throw error
 }

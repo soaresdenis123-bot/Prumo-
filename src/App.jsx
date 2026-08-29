@@ -19,7 +19,7 @@ function Spinner() {
 }
 
 function AppGated() {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, isStaff } = useAuth()
   if (loading) return <Spinner />
   if (!session) return <Login />
   if (!profile) return <Spinner />
@@ -27,19 +27,19 @@ function AppGated() {
   // Cliente com conta (raro — o padrão é o link público): mostra só o portal
   if (profile.papel === 'cliente') return <Portal />
 
-  // Equipe (admin / gestor)
+  // Equipe (admin/gestor) = tudo. Execução = só obras + etapas.
   return (
     <Layout>
       <Routes>
         <Route path="/" element={<Painel />} />
         <Route path="/obras" element={<Obras />} />
         <Route path="/obra/:id" element={<ObraDetail />} />
-        <Route path="/nova" element={<NovaObra />} />
-        <Route path="/calculadora" element={<Calculadora />} />
-        <Route path="/orcamentos" element={<Orcamentos />} />
-        <Route path="/fornecedores" element={<Fornecedores />} />
-        <Route path="/fornecedores/:id" element={<FornecedorDetail />} />
-        <Route path="/financeiro" element={<Financeiro />} />
+        {isStaff && <Route path="/nova" element={<NovaObra />} />}
+        {isStaff && <Route path="/calculadora" element={<Calculadora />} />}
+        {isStaff && <Route path="/orcamentos" element={<Orcamentos />} />}
+        {isStaff && <Route path="/fornecedores" element={<Fornecedores />} />}
+        {isStaff && <Route path="/fornecedores/:id" element={<FornecedorDetail />} />}
+        {isStaff && <Route path="/financeiro" element={<Financeiro />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

@@ -22,8 +22,8 @@ const IconTruck = () => (
 )
 
 export default function Layout({ children }) {
-  const { profile, signOut } = useAuth()
-  const papelLabel = profile.papel === 'admin' ? 'Administrador' : 'Gestor de obra'
+  const { profile, signOut, isStaff } = useAuth()
+  const papelLabel = profile.papel === 'admin' ? 'Administrador' : profile.papel === 'gestor' ? 'Gestor de obra' : 'Execução de obra'
   return (
     <div className="app">
       <aside className="side">
@@ -38,11 +38,11 @@ export default function Layout({ children }) {
           <div className="lbl">Gestão</div>
           <NavLink to="/" end><IconPanel />Painel</NavLink>
           <NavLink to="/obras"><IconObras />Obras</NavLink>
-          <NavLink to="/calculadora"><IconCalc />Calculadora</NavLink>
-          <NavLink to="/orcamentos"><IconDoc />Orçamentos</NavLink>
-          <div className="lbl">Interno</div>
-          <NavLink to="/financeiro"><IconFin />Financeiro</NavLink>
-          <NavLink to="/fornecedores"><IconTruck />Fornecedores</NavLink>
+          {isStaff && <NavLink to="/calculadora"><IconCalc />Calculadora</NavLink>}
+          {isStaff && <NavLink to="/orcamentos"><IconDoc />Orçamentos</NavLink>}
+          {isStaff && <div className="lbl">Interno</div>}
+          {isStaff && <NavLink to="/financeiro"><IconFin />Financeiro</NavLink>}
+          {isStaff && <NavLink to="/fornecedores"><IconTruck />Fornecedores</NavLink>}
         </nav>
         <div className="foot">
           <div className="who">

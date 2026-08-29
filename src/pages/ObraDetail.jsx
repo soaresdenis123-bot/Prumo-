@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getObra, updateEtapa, listFotosObra, uploadFoto, deleteAnexo, updateObra, listGestores, progresso, BRL } from '../lib/data'
-import { orcadoDe } from './Painel'
+import { orcadoDe, metaCustoDe } from './Painel'
 import { useAuth } from '../lib/auth'
 import Custos from './Custos'
+import CasaProgresso from '../components/CasaProgresso'
 
 const HOJE = new Date()
 
@@ -106,7 +107,7 @@ function Etapa({ etapa, obraId, anexos, onChange, onFoto }) {
 
 export default function ObraDetail() {
   const { id } = useParams()
-  const { isAdmin } = useAuth()
+  const { isAdmin, isStaff } = useAuth()
   const [obra, setObra] = useState(null)
   const [fotos, setFotos] = useState({})
   const [gestores, setGestores] = useState([])
@@ -139,7 +140,7 @@ export default function ObraDetail() {
           </div>
         </div>
 
-        {linkCliente && (
+        {linkCliente && isStaff && (
           <div className="card" style={{ padding: '12px 16px', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink3)', fontWeight: 700 }}>Link do cliente</div>
@@ -156,7 +157,7 @@ export default function ObraDetail() {
         )}
 
         <div className="tabbar" style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--line)', marginBottom: 20 }}>
-          {[['etapas', 'Etapas & anexos'], ['custos', 'Custos'], ['dados', 'Dados da obra']].map(([t, lbl]) => (
+          {[['etapas', 'Etapas & anexos'], ...(isStaff ? [['custos', 'Custos']] : []), ['dados', 'Dados da obra']].map(([t, lbl]) => (
             <button key={t} onClick={() => setTab(t)}
               style={{ padding: '10px 15px', fontSize: 13.5, fontWeight: 600, color: tab === t ? 'var(--accent2)' : 'var(--ink3)', borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent', marginBottom: -1 }}>
               {lbl}{t === 'custos' && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, letterSpacing: '.05em', color: 'var(--crit)', background: 'var(--crit-bg)', padding: '2px 6px', borderRadius: 5, textTransform: 'uppercase' }}>Interno</span>}
@@ -165,14 +166,21 @@ export default function ObraDetail() {
         </div>
 
         {tab === 'etapas' && (
-          <div className="card" style={{ padding: '8px 20px' }}>
-            {obra.etapas.map((e) => (
-              <Etapa key={e.id} etapa={e} obraId={obra.id} anexos={fotos[e.id]} onChange={load} onFoto={loadFotos} />
-            ))}
+          <div className="obra-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+            <div className="card" style={{ padding: '8px 20px' }}>
+              {obra.etapas.map((e) => (
+                <Etapa key={e.id} etapa={e} obraId={obra.id} anexos={fotos[e.id]} onChange={load} onFoto={loadFotos} />
+              ))}
+            </div>
+            <div style={{ position: 'sticky', top: 82 }}>
+              <div className="sec-title" style={{ marginTop: 0 }}>Casa em construção</div>
+              <CasaProgresso etapas={obra.etapas} pavimentos={obra.pavimentos} />
+              <div className="muted" style={{ fontSize: 11.5, textAlign: 'center', marginTop: 8 }}>É isto que o cliente vê no link dele.</div>
+            </div>
           </div>
         )}
 
-        {tab === 'custos' && <Custos obra={obra} orcado={orcadoDe(obra)} onOrcadoChange={load} />}
+        {tab === 'custos' && isStaff && <Custos obra={obra} orcado={orcadoDe(obra)} meta={metaCustoDe(obra)} onOrcadoChange={load} onMetaChange={load} />}
 
         {tab === 'dados' && (
           <div className="card" style={{ padding: 18, maxWidth: 620 }}>
@@ -185,7 +193,7 @@ export default function ObraDetail() {
             <Row k="Área construída" v={(obra.area_m2 || '—') + ' m²'} />
             <Row k="Início" v={obra.inicio || '—'} />
             <Row k="Previsão de entrega" v={obra.previsao || '—'} />
-            <Row k="Orçado (interno)" v={BRL(orcadoDe(obra))} />
+            {isStaff && <Row k="Orçado (interno)" v={BRL(orcadoDe(obra))} />}
             {isAdmin && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', fontSize: 13 }}>
                 <span className="muted">Gestor responsável</span>

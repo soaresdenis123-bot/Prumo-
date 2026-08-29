@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { listObras, listFotosObra, progresso } from '../lib/data'
 import { useAuth } from '../lib/auth'
 import PlumbMark from '../components/PlumbMark'
+import CasaProgresso from '../components/CasaProgresso'
 
 export default function Portal() {
   const { profile, signOut } = useAuth()
@@ -67,6 +68,11 @@ export default function Portal() {
             </div>
             <div className="ring" style={{ '--p': p }}><b>{p}%</b></div>
           </div>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <div className="sec-title">Sua casa, sendo construída</div>
+          <CasaProgresso etapas={o.etapas} pavimentos={o.pavimentos} />
         </div>
 
         <div className="card" style={{ padding: '8px 20px', marginTop: 20 }}>

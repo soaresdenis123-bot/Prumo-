@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { listCustos, addCusto, deleteCusto, setOrcado, listFornecedores, BRL } from '../lib/data'
+import { listCustos, addCusto, deleteCusto, setOrcado, setMetaCusto, listFornecedores, BRL } from '../lib/data'
 
 const inp = { width: '100%', padding: '7px 9px', border: '1px solid var(--line)', borderRadius: 7, background: 'var(--surface)', color: 'var(--ink)', fontSize: 12.5 }
 const num = { ...inp, textAlign: 'right', fontFamily: 'IBM Plex Mono' }
+const fld = { width: 130, padding: '7px 9px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', color: 'var(--ink)', textAlign: 'right', fontFamily: 'IBM Plex Mono', fontSize: 13 }
 
 // ---- Mão de obra: etapa · descrição · valor ----
 function SecaoMO({ itens, etapas, onAdd, onDel }) {
@@ -120,19 +121,26 @@ function AddBtn({ onClick }) {
   return <button className="btn" style={{ padding: '7px 10px', fontSize: 12 }} onClick={onClick}>+</button>
 }
 
-export default function Custos({ obra, orcado, onOrcadoChange }) {
+export default function Custos({ obra, orcado, meta, onOrcadoChange, onMetaChange }) {
   const [itens, setItens] = useState(null)
   const [forns, setForns] = useState([])
   const [orc, setOrc] = useState(orcado || 0)
-  const [savingOrc, setSavingOrc] = useState(false)
+  const [metaC, setMetaC] = useState(meta || 0)
+  const [saving, setSaving] = useState(false)
 
   async function load() { setItens(await listCustos(obra.id)) }
   useEffect(() => { load(); listFornecedores().then(setForns).catch(() => {}) }, [obra.id])
   useEffect(() => { setOrc(orcado || 0) }, [orcado])
+  useEffect(() => { setMetaC(meta || 0) }, [meta])
 
   async function add(cat, item) { await addCusto(obra.id, { categoria: cat, ...item }); await load() }
   async function del(id) { await deleteCusto(id); await load() }
-  async function salvarOrc() { setSavingOrc(true); await setOrcado(obra.id, orc); onOrcadoChange?.(Number(orc) || 0); setSavingOrc(false) }
+  async function salvar() {
+    setSaving(true)
+    await setOrcado(obra.id, orc); await setMetaCusto(obra.id, metaC)
+    onOrcadoChange?.(Number(orc) || 0); onMetaChange?.(Number(metaC) || 0)
+    setSaving(false)
+  }
 
   if (!itens) return <div className="spin" />
   const porCat = (k) => itens.filter((i) => i.categoria === k)
@@ -141,25 +149,45 @@ export default function Custos({ obra, orcado, onOrcadoChange }) {
   const tforn = porCat('fornecedor').reduce((t, i) => t + Number(i.valor || 0), 0)
   const custo = tmo + tmat + tforn
   const orcadoN = Number(orc) || 0
+  const metaN = Number(metaC) || 0
   const margem = orcadoN ? Math.round((1 - custo / orcadoN) * 100) : 0
   const lucro = orcadoN - custo
+  const consumo = metaN ? Math.round((custo / metaN) * 100) : 0
+  const estourou = metaN > 0 && custo > metaN
+  const corMeta = !metaN ? 'var(--ink3)' : consumo > 100 ? 'var(--crit)' : consumo > 85 ? 'var(--warn)' : 'var(--ok)'
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <span className="pill" style={{ background: 'var(--crit-bg)', color: 'var(--crit)', fontWeight: 700 }}>Interno · invisível para o cliente</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="muted" style={{ fontSize: 12 }}>Orçado (contrato)</span>
-          <input type="number" value={orc} onChange={(e) => setOrc(e.target.value)} style={{ width: 130, padding: '7px 9px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', color: 'var(--ink)', textAlign: 'right', fontFamily: 'IBM Plex Mono' }} />
-          <button className="btn ghost" style={{ fontSize: 12, padding: '7px 11px' }} onClick={salvarOrc} disabled={savingOrc}>{savingOrc ? '…' : 'Salvar'}</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-end', gap: 14, flexWrap: 'wrap' }}>
+          <label style={{ fontSize: 11, color: 'var(--ink3)' }}>Orçado (contrato)<br />
+            <input type="number" value={orc} onChange={(e) => setOrc(e.target.value)} style={fld} /></label>
+          <label style={{ fontSize: 11, color: 'var(--ink3)' }}>Meta de custo<br />
+            <input type="number" value={metaC} onChange={(e) => setMetaC(e.target.value)} style={fld} /></label>
+          <button className="btn ghost" style={{ fontSize: 12, padding: '7px 11px' }} onClick={salvar} disabled={saving}>{saving ? '…' : 'Salvar'}</button>
         </div>
       </div>
 
-      <div className="grid-kpi" style={{ marginBottom: 18 }}>
-        <div className="card kpi"><div className="k">Orçado</div><div className="v">{BRL(orcadoN)}</div><div className="dsc">contrato</div></div>
-        <div className="card kpi"><div className="k">Mão de obra</div><div className="v">{BRL(tmo)}</div><div className="dsc">por etapa</div></div>
-        <div className="card kpi"><div className="k">Material + forn.</div><div className="v">{BRL(tmat + tforn)}</div><div className="dsc">insumos</div></div>
-        <div className="card kpi"><div className="k">Margem atual</div><div className="v" style={{ color: margem >= 0 ? 'var(--ok)' : 'var(--crit)' }}>{margem}%</div><div className="dsc">{BRL(lucro)} de folga</div></div>
+      <div className="grid-kpi" style={{ marginBottom: 14 }}>
+        <div className="card kpi"><div className="k">Orçado (receita)</div><div className="v">{BRL(orcadoN)}</div><div className="dsc">contrato com cliente</div></div>
+        <div className="card kpi"><div className="k">Custo realizado</div><div className="v">{BRL(custo)}</div><div className="dsc">lançado até agora</div></div>
+        <div className="card kpi"><div className="k">Meta de custo</div><div className="v">{metaN ? BRL(metaN) : '—'}</div><div className="dsc">{metaN ? BRL(metaN - custo) + ' restante' : 'defina a meta'}</div></div>
+        <div className="card kpi"><div className="k">Margem</div><div className="v" style={{ color: margem >= 0 ? 'var(--ok)' : 'var(--crit)' }}>{margem}%</div><div className="dsc">{BRL(lucro)} de lucro</div></div>
+      </div>
+
+      <div className="card" style={{ padding: 16, marginBottom: 18 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+          <div className="sec-title" style={{ margin: 0 }}>Consumo da meta de custo</div>
+          {metaN ? (
+            <div style={{ fontSize: 13 }}><b className="mono" style={{ color: corMeta }}>{consumo}%</b> <span className="muted">· {BRL(custo)} de {BRL(metaN)}</span></div>
+          ) : (
+            <button className="muted" style={{ fontSize: 12, color: 'var(--accent2)' }} onClick={() => setMetaC(Math.round(orcadoN * 0.65))}>Sugerir 65% do contrato ({BRL(Math.round(orcadoN * 0.65))})</button>
+          )}
+        </div>
+        <div className="bar" style={{ height: 10 }}><i style={{ width: Math.min(consumo, 100) + '%', background: corMeta }} /></div>
+        {estourou && <div style={{ fontSize: 12, color: 'var(--crit)', fontWeight: 600, marginTop: 8 }}>⚠ Custo passou da meta em {BRL(custo - metaN)}. Margem sob pressão.</div>}
+        {metaN > 0 && !estourou && <div className="muted" style={{ fontSize: 11.5, marginTop: 8 }}>A cada lançamento de mão de obra ou material a barra sobe. Fica no verde enquanto estiver dentro do planejado.</div>}
       </div>
 
       <SecaoMO itens={porCat('mao_obra')} etapas={obra.etapas} onAdd={add} onDel={del} />
