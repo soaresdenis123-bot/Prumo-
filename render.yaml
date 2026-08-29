@@ -1,0 +1,18 @@
+# Render Blueprint — deploy do Prumo como Static Site (grátis)
+# Opcional: no Render, "New → Blueprint" e aponte pro repo que ele lê isto.
+# (Ou configure manualmente pela UI, ver README.)
+services:
+  - type: web
+    name: prumo
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

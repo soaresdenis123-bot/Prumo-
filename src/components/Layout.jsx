@@ -1,0 +1,58 @@
+import { NavLink } from 'react-router-dom'
+import { useAuth } from '../lib/auth'
+import PlumbMark from './PlumbMark'
+
+const IconPanel = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+)
+const IconObras = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+)
+const IconFin = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+)
+const IconCalc = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h2M8 15h2M14 11h2M14 15h2"/></svg>
+)
+const IconDoc = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>
+)
+const IconTruck = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4h14v11H1zM15 8h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+)
+
+export default function Layout({ children }) {
+  const { profile, signOut } = useAuth()
+  const papelLabel = profile.papel === 'admin' ? 'Administrador' : 'Gestor de obra'
+  return (
+    <div className="app">
+      <aside className="side">
+        <div className="brand">
+          <PlumbMark size={30} ink="var(--side-ink)" />
+          <div>
+            <div className="nm">Prumo<span style={{ color: 'var(--accent)' }}>.</span></div>
+            <div className="sub">by Grupo MS</div>
+          </div>
+        </div>
+        <nav className="nav">
+          <div className="lbl">Gestão</div>
+          <NavLink to="/" end><IconPanel />Painel</NavLink>
+          <NavLink to="/obras"><IconObras />Obras</NavLink>
+          <NavLink to="/calculadora"><IconCalc />Calculadora</NavLink>
+          <NavLink to="/orcamentos"><IconDoc />Orçamentos</NavLink>
+          <div className="lbl">Interno</div>
+          <NavLink to="/financeiro"><IconFin />Financeiro</NavLink>
+          <NavLink to="/fornecedores"><IconTruck />Fornecedores</NavLink>
+        </nav>
+        <div className="foot">
+          <div className="who">
+            {profile.nome || profile.email}
+            <small>{papelLabel}</small>
+          </div>
+          <button className="out" onClick={signOut}>Sair</button>
+        </div>
+      </aside>
+      <div className="main">{children}</div>
+    </div>
+  )
+}
