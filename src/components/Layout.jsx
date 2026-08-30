@@ -38,8 +38,7 @@ export default function Layout({ children }) {
           <div className="lbl">Gestão</div>
           <NavLink to="/" end><IconPanel />Painel</NavLink>
           <NavLink to="/obras"><IconObras />Obras</NavLink>
-          {isStaff && <NavLink to="/calculadora"><IconCalc />Calculadora</NavLink>}
-          {isStaff && <NavLink to="/orcamentos"><IconDoc />Orçamentos</NavLink>}
+          {isStaff && <NavLink to="/orcamento"><IconCalc />Orçamento</NavLink>}
           {isStaff && <div className="lbl">Interno</div>}
           {isStaff && <NavLink to="/financeiro"><IconFin />Financeiro</NavLink>}
           {isStaff && <NavLink to="/fornecedores"><IconTruck />Fornecedores</NavLink>}

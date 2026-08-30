@@ -192,7 +192,48 @@ export async function getOrcamentoItens(id) {
   const { data } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', id)
   return data || []
 }
-// transforma um orçamento aprovado em obra
+// classifica um item do orçamento em mão de obra ou material (heurística)
+function categoriaCusto(cat, item) {
+  const s = ((cat || '') + ' ' + (item || '')).toLowerCase()
+  if (/m[ãa]o de obra|montagem|servi[çc]o|instala|execu[çc]|aplica[çc]|assentam/.test(s)) return 'mao_obra'
+  return 'material'
+}
+
+// semeia os custos da obra a partir dos itens de um orçamento (só se ainda não houver)
+export async function semearCustosDoOrcamento(orcId, obraId) {
+  const { data: existentes } = await supabase.from('custo_itens').select('id').eq('obra_id', obraId).limit(1)
+  if (existentes && existentes.length) return 0 // já tem custos — não duplica
+  const itens = await getOrcamentoItens(orcId)
+  const rows = itens.map((it) => {
+    const q = Number(it.qtd) || 1
+    const u = Number(it.valor_unit) || 0
+    return {
+      obra_id: obraId,
+      categoria: categoriaCusto(it.categoria, it.item),
+      grupo: it.categoria || null,
+      etapa_nome: it.item || 'Item',
+      descricao: it.categoria || '',
+      quantidade: q,
+      valor_unit: u,
+      valor: q * u,
+      status: 'pendente',
+    }
+  })
+  if (rows.length) {
+    const { error } = await supabase.from('custo_itens').insert(rows)
+    if (error) throw error
+  }
+  return rows.length
+}
+
+// aprova um orçamento já ligado a uma obra → gera a lista de custos nela
+export async function aprovarOrcamento(orc) {
+  await supabase.from('orcamentos').update({ status: 'aprovado' }).eq('id', orc.id)
+  if (orc.obra_id) await semearCustosDoOrcamento(orc.id, orc.obra_id)
+  return orc.obra_id || null
+}
+
+// transforma um orçamento aprovado em obra (cria a obra e já semeia os custos)
 export async function orcamentoParaObra(orc, gestorId) {
   const id = await createObra({
     nome: orc.descricao || orc.cliente_nome || 'Nova obra',
@@ -203,6 +244,7 @@ export async function orcamentoParaObra(orc, gestorId) {
     orcado: orc.total,
   })
   await supabase.from('orcamentos').update({ status: 'aprovado', obra_id: id }).eq('id', orc.id)
+  await semearCustosDoOrcamento(orc.id, id)
   return id
 }
 
@@ -212,7 +254,7 @@ export async function orcamentoParaObra(orc, gestorId) {
 export async function listCustos(obraId) {
   const { data, error } = await supabase
     .from('custo_itens')
-    .select('id,categoria,etapa_nome,descricao,valor')
+    .select('id,categoria,etapa_nome,descricao,grupo,quantidade,valor_unit,valor,status,fornecedor_id,etapa_id')
     .eq('obra_id', obraId)
     .order('criado_em', { ascending: true })
   if (error) throw error
@@ -225,6 +267,48 @@ export async function addCusto(obraId, item) {
 }
 export async function deleteCusto(id) {
   const { error } = await supabase.from('custo_itens').delete().eq('id', id)
+  if (error) throw error
+}
+// marca um custo como pago / pendente (o "check" no Financeiro)
+export async function setCustoStatus(id, status) {
+  const { error } = await supabase.from('custo_itens').update({ status }).eq('id', id)
+  if (error) throw error
+}
+// resumo de custos por categoria + pendente/pago (para o overview na obra)
+export async function resumoCustos(obraId) {
+  const itens = await listCustos(obraId)
+  const cats = { mao_obra: { total: 0, pago: 0, n: 0, npago: 0 }, material: { total: 0, pago: 0, n: 0, npago: 0 }, fornecedor: { total: 0, pago: 0, n: 0, npago: 0 } }
+  itens.forEach((i) => {
+    const c = cats[i.categoria] || cats.material
+    const v = Number(i.valor || 0)
+    c.total += v; c.n += 1
+    if (i.status === 'pago') { c.pago += v; c.npago += 1 }
+  })
+  const total = itens.reduce((t, i) => t + Number(i.valor || 0), 0)
+  const pago = itens.filter((i) => i.status === 'pago').reduce((t, i) => t + Number(i.valor || 0), 0)
+  return { cats, total, pago, pendente: total - pago, nItens: itens.length }
+}
+
+// ---- produtos da obra (lista de compras por etapa) ----
+export async function listProdutosObra(obraId) {
+  const { data, error } = await supabase
+    .from('obra_produtos')
+    .select('id,etapa_id,item,unidade,quantidade,status,pedir,obs,criado_em')
+    .eq('obra_id', obraId)
+    .order('criado_em', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+export async function addProdutoObra(obraId, p) {
+  const { error } = await supabase.from('obra_produtos').insert({ obra_id: obraId, ...p })
+  if (error) throw error
+}
+export async function updateProdutoObra(id, fields) {
+  const { error } = await supabase.from('obra_produtos').update(fields).eq('id', id)
+  if (error) throw error
+}
+export async function deleteProdutoObra(id) {
+  const { error } = await supabase.from('obra_produtos').delete().eq('id', id)
   if (error) throw error
 }
 // custos de todas as obras visíveis (para o Financeiro consolidado)

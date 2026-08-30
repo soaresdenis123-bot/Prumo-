@@ -6,11 +6,11 @@ import Painel from './pages/Painel'
 import Obras from './pages/Obras'
 import ObraDetail from './pages/ObraDetail'
 import NovaObra from './pages/NovaObra'
-import Calculadora from './pages/Calculadora'
-import Orcamentos from './pages/Orcamentos'
+import Orcamento from './pages/Orcamento'
 import Fornecedores from './pages/Fornecedores'
 import FornecedorDetail from './pages/FornecedorDetail'
 import Financeiro from './pages/Financeiro'
+import FinanceiroObra from './pages/FinanceiroObra'
 import Portal from './pages/Portal'
 import PublicObra from './pages/PublicObra'
 
@@ -35,11 +35,13 @@ function AppGated() {
         <Route path="/obras" element={<Obras />} />
         <Route path="/obra/:id" element={<ObraDetail />} />
         {isStaff && <Route path="/nova" element={<NovaObra />} />}
-        {isStaff && <Route path="/calculadora" element={<Calculadora />} />}
-        {isStaff && <Route path="/orcamentos" element={<Orcamentos />} />}
+        {isStaff && <Route path="/orcamento" element={<Orcamento />} />}
+        {isStaff && <Route path="/calculadora" element={<Navigate to="/orcamento" replace />} />}
+        {isStaff && <Route path="/orcamentos" element={<Navigate to="/orcamento" replace />} />}
         {isStaff && <Route path="/fornecedores" element={<Fornecedores />} />}
         {isStaff && <Route path="/fornecedores/:id" element={<FornecedorDetail />} />}
         {isStaff && <Route path="/financeiro" element={<Financeiro />} />}
+        {isStaff && <Route path="/financeiro/:id" element={<FinanceiroObra />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

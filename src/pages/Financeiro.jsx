@@ -80,7 +80,7 @@ export default function Financeiro() {
         <span className="chip-role">Interno</span></div>
       <div className="content">
         <div className="pg-head"><div><h1 className="pg">Financeiro</h1>
-          <div className="pg-sub">Orçado × custo × margem — consolidado do Grupo MS</div></div></div>
+          <div className="pg-sub">Orçado × custo × margem — clique numa obra para lançar os custos</div></div></div>
 
         <div className="grid-kpi">
           <div className="card kpi"><div className="k">Carteira (orçado)</div><div className="v">{BRL(orcTot)}</div><div className="dsc">{obras.length} obras</div></div>
@@ -103,7 +103,7 @@ export default function Financeiro() {
             </thead>
             <tbody>
               {rows.map(({ o, orc, custo, margem, consumo }) => (
-                <tr key={o.id} onClick={() => nav('/obra/' + o.id)} style={{ cursor: 'pointer', borderBottom: '1px solid var(--line2)' }}>
+                <tr key={o.id} onClick={() => nav('/financeiro/' + o.id)} style={{ cursor: 'pointer', borderBottom: '1px solid var(--line2)' }}>
                   <td style={{ padding: '12px 14px', fontWeight: 600, fontSize: 13 }}>{o.nome}</td>
                   <td className="mono" style={{ padding: '12px 14px', textAlign: 'right', fontSize: 13 }}>{BRL(orc)}</td>
                   <td className="mono" style={{ padding: '12px 14px', textAlign: 'right', fontSize: 13 }}>{BRL(custo)}</td>

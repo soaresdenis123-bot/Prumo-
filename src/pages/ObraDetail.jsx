@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getObra, updateEtapa, listFotosObra, uploadFoto, deleteAnexo, updateObra, listGestores, progresso, BRL } from '../lib/data'
-import { orcadoDe, metaCustoDe } from './Painel'
+import { getObra, updateEtapa, listFotosObra, uploadFoto, deleteAnexo, updateObra, listGestores, resumoCustos, progresso, BRL } from '../lib/data'
+import { orcadoDe } from './Painel'
 import { useAuth } from '../lib/auth'
-import Custos from './Custos'
+import ProdutosObra from './ProdutosObra'
 import CasaProgresso from '../components/CasaProgresso'
 
 const HOJE = new Date()
@@ -17,6 +17,39 @@ function Row({ k, v }) {
 }
 
 const dtInput = { padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 7, background: 'var(--surface)', color: 'var(--ink)', fontSize: 11.5, fontFamily: 'IBM Plex Mono' }
+
+const CAT_LABEL = { mao_obra: 'Mão de obra', material: 'Material', fornecedor: 'Fornecedores' }
+
+// Resumo de custos por categoria (pendente/pago) — read-only. Lançamento fica no Financeiro.
+function CustoOverview({ obraId }) {
+  const [r, setR] = useState(null)
+  useEffect(() => { resumoCustos(obraId).then(setR).catch(() => setR(null)) }, [obraId])
+  if (!r) return null
+  return (
+    <div className="card" style={{ padding: 16, marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <div className="sec-title" style={{ margin: 0 }}>Custos da obra <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.05em', color: 'var(--crit)', background: 'var(--crit-bg)', padding: '2px 6px', borderRadius: 5, textTransform: 'uppercase' }}>Interno</span></div>
+        <Link to={'/financeiro/' + obraId} className="muted" style={{ fontSize: 12, color: 'var(--accent2)', fontWeight: 600 }}>Lançar →</Link>
+      </div>
+      {r.nItens === 0 ? (
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>Nenhum custo lançado. Aprove um orçamento vinculado ou lance no Financeiro.</div>
+      ) : (
+        <>
+          {Object.entries(r.cats).filter(([, c]) => c.n > 0).map(([k, c]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line2)', fontSize: 13 }}>
+              <span>{CAT_LABEL[k]} <span className="muted" style={{ fontSize: 11 }}>· {c.npago}/{c.n} pago</span></span>
+              <span className="mono" style={{ fontWeight: 600 }}>{BRL(c.total)}</span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 12.5 }}>
+            <span style={{ color: 'var(--ok)' }}>Pago {BRL(r.pago)}</span>
+            <span style={{ color: 'var(--warn)' }}>Pendente {BRL(r.pendente)}</span>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 function Etapa({ etapa, obraId, anexos, onChange, onFoto }) {
   const fotoRef = useRef()
@@ -157,10 +190,10 @@ export default function ObraDetail() {
         )}
 
         <div className="tabbar" style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--line)', marginBottom: 20 }}>
-          {[['etapas', 'Etapas & anexos'], ...(isStaff ? [['custos', 'Custos']] : []), ['dados', 'Dados da obra']].map(([t, lbl]) => (
+          {[['etapas', 'Etapas & anexos'], ...(isStaff ? [['produtos', 'Produtos']] : []), ['dados', 'Dados da obra']].map(([t, lbl]) => (
             <button key={t} onClick={() => setTab(t)}
               style={{ padding: '10px 15px', fontSize: 13.5, fontWeight: 600, color: tab === t ? 'var(--accent2)' : 'var(--ink3)', borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent', marginBottom: -1 }}>
-              {lbl}{t === 'custos' && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, letterSpacing: '.05em', color: 'var(--crit)', background: 'var(--crit-bg)', padding: '2px 6px', borderRadius: 5, textTransform: 'uppercase' }}>Interno</span>}
+              {lbl}
             </button>
           ))}
         </div>
@@ -176,11 +209,12 @@ export default function ObraDetail() {
               <div className="sec-title" style={{ marginTop: 0 }}>Casa em construção</div>
               <CasaProgresso etapas={obra.etapas} pavimentos={obra.pavimentos} />
               <div className="muted" style={{ fontSize: 11.5, textAlign: 'center', marginTop: 8 }}>É isto que o cliente vê no link dele.</div>
+              {isStaff && <CustoOverview obraId={obra.id} />}
             </div>
           </div>
         )}
 
-        {tab === 'custos' && isStaff && <Custos obra={obra} orcado={orcadoDe(obra)} meta={metaCustoDe(obra)} onOrcadoChange={load} onMetaChange={load} />}
+        {tab === 'produtos' && isStaff && <ProdutosObra obra={obra} />}
 
         {tab === 'dados' && (
           <div className="card" style={{ padding: 18, maxWidth: 620 }}>

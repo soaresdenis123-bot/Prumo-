@@ -67,7 +67,7 @@ export default function FornecedorDetail() {
       <div className="content">
         <div className="pg-head">
           <div><h1 className="pg">{forn.nome}</h1>
-            <div className="pg-sub">{forn.fornece || 'Catálogo de produtos'}{forn.contato ? ' · ' + forn.contato : ''}</div></div>
+            <div className="pg-sub">{forn.categoria ? forn.categoria + ' · ' : ''}{forn.fornece || 'Catálogo de produtos'}{forn.contato ? ' · ' + forn.contato : ''}</div></div>
           <button className="btn ghost" onClick={() => fileRef.current.click()}>
             <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" /></svg>
             Importar planilha
@@ -124,7 +124,7 @@ export default function FornecedorDetail() {
           </div>
         )}
         <div className="muted" style={{ fontSize: 11.5, marginTop: 14 }}>
-          Dica: a planilha pode ter colunas “Produto”, “Unidade” e “Valor” (em qualquer ordem). Esses preços aparecem na Calculadora ao puxar do fornecedor.
+          Dica: a planilha pode ter colunas “Produto”, “Unidade” e “Valor” (em qualquer ordem). Esses preços aparecem no Orçamento ao puxar do fornecedor.
         </div>
       </div>
     </>
