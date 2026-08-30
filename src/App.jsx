@@ -8,6 +8,7 @@ import ObraDetail from './pages/ObraDetail'
 import NovaObra from './pages/NovaObra'
 import Orcamento from './pages/Orcamento'
 import Fornecedores from './pages/Fornecedores'
+import CategoriaDetail from './pages/CategoriaDetail'
 import FornecedorDetail from './pages/FornecedorDetail'
 import Financeiro from './pages/Financeiro'
 import FinanceiroObra from './pages/FinanceiroObra'
@@ -40,6 +41,7 @@ function AppGated() {
         {isStaff && <Route path="/calculadora" element={<Navigate to="/orcamento" replace />} />}
         {isStaff && <Route path="/orcamentos" element={<Navigate to="/orcamento" replace />} />}
         {isStaff && <Route path="/fornecedores" element={<Fornecedores />} />}
+        {isStaff && <Route path="/fornecedores/cat/:categoria" element={<CategoriaDetail />} />}
         {isStaff && <Route path="/fornecedores/:id" element={<FornecedorDetail />} />}
         {isStaff && <Route path="/financeiro" element={<Financeiro />} />}
         {isStaff && <Route path="/financeiro/:id" element={<FinanceiroObra />} />}

@@ -18,6 +18,8 @@ export const OBRA_CATEGORIAS = [
 ]
 // Categorias que o CLIENTE pode personalizar no portal (o resto não aparece pra ele)
 export const CLIENTE_CATS = ['Revestimentos', 'Acabamentos', 'Luminárias', 'Iluminação', 'Jardinagem', 'Pintura', 'Louças / Metais', 'Esquadrias']
+// Tipos de cômodo que o cliente pode adicionar na personalização
+export const AMBIENTE_TIPOS = ['Sala', 'Quarto', 'Suíte', 'Cozinha', 'Banheiro', 'Lavabo', 'Área de serviço', 'Varanda', 'Área externa', 'Escritório', 'Closet', 'Corredor']
 
 export async function listObras() {
   const { data, error } = await supabase
@@ -192,12 +194,13 @@ export function catalogoImagemUrl(path) {
   return data?.publicUrl || null
 }
 
-// ---- portfólio em PDF (arquivos internos do fornecedor) ----
-export async function uploadPortfolioArquivo(fornId, file) {
-  const path = `${fornId}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`
-  const { error } = await supabase.storage.from('portfolios').upload(path, file)
+// ---- portfólio em PDF (interno = bucket privado; cliente = bucket público) ----
+export async function uploadPortfolioArquivo(fornId, file, { cliente = false, categoria = '' } = {}) {
+  const bucket = cliente ? 'catalogo' : 'portfolios'
+  const path = `${cliente ? 'docs/' : ''}${fornId}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`
+  const { error } = await supabase.storage.from(bucket).upload(path, file)
   if (error) throw error
-  const { error: e2 } = await supabase.from('fornecedor_arquivos').insert({ fornecedor_id: fornId, nome: file.name, path })
+  const { error: e2 } = await supabase.from('fornecedor_arquivos').insert({ fornecedor_id: fornId, nome: file.name, path, bucket, categoria: cliente ? categoria : null, no_catalogo: cliente })
   if (e2) throw e2
   return path
 }
@@ -206,13 +209,71 @@ export async function listArquivos(fornId) {
   if (error) throw error
   return data || []
 }
-export async function arquivoUrl(path) {
-  const { data } = await supabase.storage.from('portfolios').createSignedUrl(path, 3600)
+export async function arquivoUrl(a) {
+  // a = objeto do arquivo (path + bucket). PDFs de cliente ficam no bucket público.
+  if (a?.bucket === 'catalogo' || a?.no_catalogo) {
+    const { data } = supabase.storage.from('catalogo').getPublicUrl(a.path)
+    return data?.publicUrl || null
+  }
+  const { data } = await supabase.storage.from('portfolios').createSignedUrl(a.path, 3600)
   return data?.signedUrl || null
 }
 export async function deleteArquivo(id) {
   const { error } = await supabase.from('fornecedor_arquivos').delete().eq('id', id)
   if (error) throw error
+}
+
+// ---- visão por CATEGORIA (cards + página da categoria) ----
+export async function contarPorCategoria() {
+  const [{ data: fs }, { data: ps }] = await Promise.all([
+    supabase.from('fornecedores').select('categoria'),
+    supabase.from('fornecedor_produtos').select('categoria'),
+  ])
+  const r = {}
+  ;(fs || []).forEach((x) => { const k = x.categoria || 'Outros'; (r[k] = r[k] || { forn: 0, itens: 0 }).forn++ })
+  ;(ps || []).forEach((x) => { const k = x.categoria || 'Outros'; (r[k] = r[k] || { forn: 0, itens: 0 }).itens++ })
+  return r
+}
+export async function listProdutosPorCategoria(cat) {
+  const { data, error } = await supabase
+    .from('fornecedor_produtos')
+    .select('id,produto,categoria,unidade,valor,preco_cliente,no_catalogo,imagem_path,fornecedor_id,fornecedores(nome)')
+    .eq('categoria', cat).order('produto')
+  if (error) throw error
+  return (data || []).map((r) => ({ ...r, fornecedor: r.fornecedores?.nome }))
+}
+export async function listFornecedoresPorCategoria(cat) {
+  const { data, error } = await supabase.from('fornecedores').select('*').eq('categoria', cat).order('nome')
+  if (error) throw error
+  return data || []
+}
+export async function uploadCategoriaPortfolio(categoria, file) {
+  const path = `docs/cat/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`
+  const { error } = await supabase.storage.from('catalogo').upload(path, file)
+  if (error) throw error
+  const { error: e2 } = await supabase.from('fornecedor_arquivos').insert({ fornecedor_id: null, nome: file.name, path, bucket: 'catalogo', categoria, no_catalogo: true })
+  if (e2) throw e2
+  return path
+}
+export async function listCategoriaArquivos(cat) {
+  const { data, error } = await supabase.from('fornecedor_arquivos').select('*').eq('categoria', cat).eq('no_catalogo', true).order('criado_em', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+// ---- personalização por ambiente (cliente, sem login) ----
+export async function portfoliosPublicos(token) {
+  const { data, error } = await supabase.rpc('portfolios_publicos', { p_token: token })
+  if (error) throw error
+  return (data || []).map((d) => {
+    const { data: u } = supabase.storage.from('catalogo').getPublicUrl(d.path)
+    return { ...d, url: u?.publicUrl || null }
+  })
+}
+export async function ambientesObra(token) {
+  const { data, error } = await supabase.rpc('ambientes_obra', { p_token: token })
+  if (error) throw error
+  return data || []
 }
 // todos os produtos de todos os fornecedores (para puxar no orçamento)
 export async function listProdutosComFornecedor() {

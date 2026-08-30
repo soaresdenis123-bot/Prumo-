@@ -1,115 +1,51 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listFornecedores, addFornecedor, deleteFornecedor, OBRA_CATEGORIAS } from '../lib/data'
-
-const inp = { padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)', color: 'var(--ink)', fontSize: 13 }
-const TIPO_LBL = { material: 'Material', mao_obra: 'Mão de obra', servico: 'Serviço' }
+import { contarPorCategoria, OBRA_CATEGORIAS } from '../lib/data'
 
 export default function Fornecedores() {
   const nav = useNavigate()
-  const [forns, setForns] = useState(null)
-  const [f, setF] = useState({ nome: '', tipo: 'material', categoria: '', fornece: '', contato: '' })
-  const [filtroCat, setFiltroCat] = useState('')
-  const [filtroTipo, setFiltroTipo] = useState('')
+  const [cont, setCont] = useState(null)
   const [err, setErr] = useState('')
 
-  async function load() { try { setForns(await listFornecedores()) } catch (e) { setErr(e.message) } }
-  useEffect(() => { load() }, [])
-
-  async function add() {
-    if (!f.nome.trim()) return
-    await addFornecedor(f); setF({ nome: '', tipo: f.tipo, categoria: f.categoria, fornece: '', contato: '' }); load()
-  }
-  async function del(id) { await deleteFornecedor(id); load() }
-
-  const catsPresentes = useMemo(() => {
-    const set = new Set((forns || []).map((x) => x.categoria || 'Sem categoria'))
-    // ordena pela ordem da obra
-    return OBRA_CATEGORIAS.filter((c) => set.has(c)).concat(Array.from(set).filter((c) => !OBRA_CATEGORIAS.includes(c)))
-  }, [forns])
-
-  const visiveis = (forns || []).filter((x) =>
-    (!filtroCat || (x.categoria || 'Sem categoria') === filtroCat) && (!filtroTipo || (x.tipo || 'material') === filtroTipo))
-  const grupos = useMemo(() => {
-    const g = {}
-    visiveis.forEach((x) => { const k = x.categoria || 'Sem categoria'; (g[k] = g[k] || []).push(x) })
-    const ordered = OBRA_CATEGORIAS.filter((c) => g[c]).map((c) => [c, g[c]])
-    Object.keys(g).filter((c) => !OBRA_CATEGORIAS.includes(c)).sort().forEach((c) => ordered.push([c, g[c]]))
-    return ordered
-  }, [visiveis])
+  useEffect(() => { contarPorCategoria().then(setCont).catch((e) => setErr(e.message)) }, [])
 
   if (err) return <div className="content"><div className="center-note">Erro: {err}</div></div>
-  if (!forns) return <div className="spin" />
+  if (!cont) return <div className="spin" />
 
-  const chip = (on) => ({ padding: '6px 12px', borderRadius: 20, border: '1px solid var(--line)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: on ? 'var(--ink)' : 'var(--surface)', color: on ? 'var(--bg)' : 'var(--ink2)' })
-  const seg = (on) => ({ padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', fontWeight: 600, fontSize: 13, cursor: 'pointer', flex: 1, background: on ? 'var(--accent)' : 'var(--surface)', color: on ? '#fff' : 'var(--ink2)' })
-
-  const nMat = forns.filter((x) => (x.tipo || 'material') === 'material').length
-  const nMo = forns.filter((x) => x.tipo === 'mao_obra').length
+  // categorias da obra + quaisquer extras que já tenham cadastro
+  const extras = Object.keys(cont).filter((c) => !OBRA_CATEGORIAS.includes(c))
+  const cats = [...OBRA_CATEGORIAS, ...extras]
+  const totForn = Object.values(cont).reduce((t, c) => t + c.forn, 0)
+  const totItens = Object.values(cont).reduce((t, c) => t + c.itens, 0)
 
   return (
     <>
       <div className="topbar"><div className="crumb"><b>Fornecedores & Mão de obra</b></div><span className="chip-role">Interno</span></div>
       <div className="content">
-        <div className="pg-head"><div><h1 className="pg">Fornecedores & Mão de obra</h1>
-          <div className="pg-sub">{nMat} de material · {nMo} de mão de obra · {catsPresentes.length} categorias</div></div></div>
+        <div className="pg-head"><div><h1 className="pg">Fornecedores por categoria</h1>
+          <div className="pg-sub">{totForn} fornecedores · {totItens} itens · clique numa categoria pra ver os itens e o portfólio</div></div></div>
 
-        <div className="card" style={{ padding: 16, marginBottom: 18 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button style={seg(f.tipo === 'material')} onClick={() => setF({ ...f, tipo: 'material' })}>Material</button>
-            <button style={seg(f.tipo === 'mao_obra')} onClick={() => setF({ ...f, tipo: 'mao_obra' })}>Mão de obra</button>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <input placeholder="Nome *" value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} style={{ ...inp, flex: 2, minWidth: 140 }} />
-            <input list="cat-list" placeholder="Categoria da obra…" value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value })} style={{ ...inp, flex: 2, minWidth: 150 }} />
-            <datalist id="cat-list">{OBRA_CATEGORIAS.map((c) => <option key={c} value={c} />)}</datalist>
-            <input placeholder={f.tipo === 'mao_obra' ? 'O que executa' : 'O que fornece'} value={f.fornece} onChange={(e) => setF({ ...f, fornece: e.target.value })} style={{ ...inp, flex: 2, minWidth: 130 }} />
-            <input placeholder="Contato" value={f.contato} onChange={(e) => setF({ ...f, contato: e.target.value })} style={{ ...inp, flex: 2, minWidth: 120 }} />
-            <button className="btn" onClick={add}>+ Adicionar</button>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
+          {cats.map((c) => {
+            const n = cont[c] || { forn: 0, itens: 0 }
+            const vazio = n.forn === 0 && n.itens === 0
+            return (
+              <button key={c} onClick={() => nav('/fornecedores/cat/' + encodeURIComponent(c))}
+                className="card" style={{ padding: 16, textAlign: 'left', cursor: 'pointer', border: '1px solid var(--line)', opacity: vazio ? 0.72 : 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--surface2)', display: 'grid', placeItems: 'center', flex: 'none' }}>
+                    <svg viewBox="0 0 24 24" width="19" fill="none" stroke="var(--accent2)" strokeWidth="2"><path d="M1 4h14v11H1zM15 8h4l3 3v4h-7" /><circle cx="6" cy="18" r="2" /><circle cx="18" cy="18" r="2" /></svg>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.2 }}>{c}</div>
+                </div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 12, display: 'flex', gap: 12 }}>
+                  <span><b className="mono" style={{ color: 'var(--ink)' }}>{n.forn}</b> fornec.</span>
+                  <span><b className="mono" style={{ color: 'var(--ink)' }}>{n.itens}</b> itens</span>
+                </div>
+              </button>
+            )
+          })}
         </div>
-
-        {forns.length === 0 ? (
-          <div className="center-note">Nenhum cadastro ainda. Classifique por tipo e categoria da obra ao adicionar.</div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-              <span style={chip(!filtroTipo)} onClick={() => setFiltroTipo('')}>Todos</span>
-              <span style={chip(filtroTipo === 'material')} onClick={() => setFiltroTipo('material')}>Material</span>
-              <span style={chip(filtroTipo === 'mao_obra')} onClick={() => setFiltroTipo('mao_obra')}>Mão de obra</span>
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-              <span style={chip(!filtroCat)} onClick={() => setFiltroCat('')}>Todas categorias</span>
-              {catsPresentes.map((c) => <span key={c} style={chip(filtroCat === c)} onClick={() => setFiltroCat(c)}>{c}</span>)}
-            </div>
-
-            {grupos.map(([cat, itens]) => (
-              <div key={cat} style={{ marginBottom: 18 }}>
-                <div style={{ padding: '8px 4px', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent2)', fontWeight: 700 }}>
-                  {cat} <span className="muted" style={{ fontWeight: 500 }}>· {itens.length}</span>
-                </div>
-                <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
-                    <thead><tr>{['Nome', 'Tipo', 'O que faz', 'Contato', ''].map((h) => (
-                      <th key={h} style={{ textAlign: 'left', fontSize: 10.5, textTransform: 'uppercase', color: 'var(--ink3)', fontWeight: 700, padding: '10px 14px', borderBottom: '1px solid var(--line)' }}>{h}</th>
-                    ))}</tr></thead>
-                    <tbody>
-                      {itens.map((x) => (
-                        <tr key={x.id} onClick={() => nav('/fornecedores/' + x.id)} style={{ borderBottom: '1px solid var(--line2)', cursor: 'pointer' }}>
-                          <td style={{ padding: '11px 14px', fontWeight: 600, fontSize: 13, color: 'var(--accent2)' }}>{x.nome}</td>
-                          <td style={{ padding: '11px 14px' }}><span className="pill" style={{ background: x.tipo === 'mao_obra' ? 'var(--ok-bg,var(--surface2))' : 'var(--surface2)', color: x.tipo === 'mao_obra' ? 'var(--ok)' : 'var(--ink2)', fontSize: 11 }}>{TIPO_LBL[x.tipo] || 'Material'}</span></td>
-                          <td className="muted" style={{ padding: '11px 14px', fontSize: 13 }}>{x.fornece || '—'}</td>
-                          <td className="muted" style={{ padding: '11px 14px', fontSize: 13 }}>{x.contato || '—'}</td>
-                          <td style={{ padding: '11px 14px', textAlign: 'right' }}><button className="muted" onClick={(e) => { e.stopPropagation(); del(x.id) }} style={{ fontSize: 15 }}>×</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
       </div>
     </>
   )

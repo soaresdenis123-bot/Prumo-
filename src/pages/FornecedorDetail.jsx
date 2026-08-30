@@ -196,28 +196,43 @@ function PortfolioPdf({ fornId }) {
   const pdfRef = useRef()
   const [arqs, setArqs] = useState([])
   const [busy, setBusy] = useState(false)
+  const [cliente, setCliente] = useState(false)
+  const [cat, setCat] = useState('')
   async function load() { try { setArqs(await listArquivos(fornId)) } catch { /* noop */ } }
   useEffect(() => { load() }, [fornId])
   async function up(e) {
     const file = e.target.files?.[0]; if (!file) return
     setBusy(true)
-    try { await uploadPortfolioArquivo(fornId, file); await load() } catch (err) { alert('Falha: ' + err.message) }
+    try { await uploadPortfolioArquivo(fornId, file, { cliente, categoria: cat }); await load() } catch (err) { alert('Falha: ' + err.message) }
     setBusy(false); e.target.value = ''
   }
-  async function abrir(path) { const u = await arquivoUrl(path); if (u) window.open(u, '_blank') }
+  async function abrir(a) { const u = await arquivoUrl(a); if (u) window.open(u, '_blank') }
   async function rem(id) { await deleteArquivo(id); load() }
   return (
     <div className="card" style={{ padding: 16, marginBottom: 18 }}>
+      <div className="sec-title" style={{ marginTop: 0 }}>Portfólio em PDF</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <div className="sec-title" style={{ margin: 0 }}>Portfólio em PDF <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· catálogos, tabelas, apresentações (interno)</span></div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
+          <input type="checkbox" checked={cliente} onChange={(e) => setCliente(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+          Mostrar pro cliente
+        </label>
+        {cliente && (
+          <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...inp, padding: '6px 8px', fontSize: 12.5 }}>
+            <option value="">Categoria…</option>{CATS_PRODUTO.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
         <button className="btn ghost" style={{ marginLeft: 'auto', fontSize: 12.5 }} disabled={busy} onClick={() => pdfRef.current.click()}>{busy ? 'Enviando…' : '+ Anexar PDF'}</button>
         <input ref={pdfRef} type="file" accept=".pdf,application/pdf" hidden onChange={up} />
+      </div>
+      <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
+        {cliente ? '⚠ Esse PDF fica visível pro cliente na personalização — use um catálogo sem a marca/logo do fornecedor.' : 'PDF interno (só a equipe vê). Marque “mostrar pro cliente” pra virar catálogo de escolha.'}
       </div>
       {arqs.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
           {arqs.map((a) => (
             <span key={a.id} className="doc-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12.5 }}>
-              <a onClick={() => abrir(a.path)} style={{ cursor: 'pointer', color: 'var(--accent2)' }}>📄 {a.nome || 'portfolio.pdf'}</a>
+              <a onClick={() => abrir(a)} style={{ cursor: 'pointer', color: 'var(--accent2)' }}>📄 {a.nome || 'portfolio.pdf'}</a>
+              {a.no_catalogo && <span className="pill ok" style={{ fontSize: 10 }}>cliente{a.categoria ? ' · ' + a.categoria : ''}</span>}
               <button className="muted" onClick={() => rem(a.id)} title="Remover" style={{ fontSize: 14 }}>×</button>
             </span>
           ))}
