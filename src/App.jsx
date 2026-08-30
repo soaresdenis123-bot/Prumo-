@@ -11,6 +11,7 @@ import Fornecedores from './pages/Fornecedores'
 import FornecedorDetail from './pages/FornecedorDetail'
 import Financeiro from './pages/Financeiro'
 import FinanceiroObra from './pages/FinanceiroObra'
+import Time from './pages/Time'
 import Portal from './pages/Portal'
 import PublicObra from './pages/PublicObra'
 
@@ -42,6 +43,7 @@ function AppGated() {
         {isStaff && <Route path="/fornecedores/:id" element={<FornecedorDetail />} />}
         {isStaff && <Route path="/financeiro" element={<Financeiro />} />}
         {isStaff && <Route path="/financeiro/:id" element={<FinanceiroObra />} />}
+        {isStaff && <Route path="/time" element={<Time />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

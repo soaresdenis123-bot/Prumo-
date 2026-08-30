@@ -8,7 +8,16 @@ export const progresso = (etapas = []) =>
 
 const OBRA_SELECT =
   'id,nome,cliente_nome,cliente_email,cliente_tel,endereco,cidade,padrao,area_m2,pavimentos,inicio,previsao,status,gestor_id,share_token,' +
-  'etapas(id,ordem,nome,status,pct,obs),obra_financeiro(orcado,meta_custo)'
+  'etapas(id,ordem,nome,status,pct,obs,inicio,fim,executor_id),obra_financeiro(orcado,meta_custo)'
+
+// Categorias de uma obra (da fundação à entrega) — usadas em Fornecedores e no portfólio
+export const OBRA_CATEGORIAS = [
+  'Projeto & Legalização', 'Fundação', 'Estrutura Steel Frame', 'Fechamento & Isolamento', 'Cobertura',
+  'Esquadrias', 'Elétrica', 'Hidráulica', 'Revestimentos', 'Acabamentos', 'Pintura', 'Marcenaria',
+  'Louças / Metais', 'Jardinagem', 'Mão de obra', 'Outros',
+]
+// Categorias que o CLIENTE pode personalizar no portal (o resto não aparece pra ele)
+export const CLIENTE_CATS = ['Revestimentos', 'Acabamentos', 'Luminárias', 'Iluminação', 'Jardinagem', 'Pintura', 'Louças / Metais', 'Esquadrias']
 
 export async function listObras() {
   const { data, error } = await supabase
@@ -161,8 +170,48 @@ export async function addProdutosBulk(fornId, rows) {
   const { error } = await supabase.from('fornecedor_produtos').insert(payload)
   if (error) throw error
 }
+export async function updateProduto(id, fields) {
+  const { error } = await supabase.from('fornecedor_produtos').update(fields).eq('id', id)
+  if (error) throw error
+}
 export async function deleteProduto(id) {
   const { error } = await supabase.from('fornecedor_produtos').delete().eq('id', id)
+  if (error) throw error
+}
+// ---- portfólio: imagem do produto no bucket público 'catalogo' ----
+export async function uploadCatalogoImagem(fornId, file) {
+  const ext = file.name.split('.').pop()
+  const path = `${fornId}/${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('catalogo').upload(path, file, { upsert: true })
+  if (error) throw error
+  return path
+}
+export function catalogoImagemUrl(path) {
+  if (!path) return null
+  const { data } = supabase.storage.from('catalogo').getPublicUrl(path)
+  return data?.publicUrl || null
+}
+
+// ---- portfólio em PDF (arquivos internos do fornecedor) ----
+export async function uploadPortfolioArquivo(fornId, file) {
+  const path = `${fornId}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`
+  const { error } = await supabase.storage.from('portfolios').upload(path, file)
+  if (error) throw error
+  const { error: e2 } = await supabase.from('fornecedor_arquivos').insert({ fornecedor_id: fornId, nome: file.name, path })
+  if (e2) throw e2
+  return path
+}
+export async function listArquivos(fornId) {
+  const { data, error } = await supabase.from('fornecedor_arquivos').select('*').eq('fornecedor_id', fornId).order('criado_em', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+export async function arquivoUrl(path) {
+  const { data } = await supabase.storage.from('portfolios').createSignedUrl(path, 3600)
+  return data?.signedUrl || null
+}
+export async function deleteArquivo(id) {
+  const { error } = await supabase.from('fornecedor_arquivos').delete().eq('id', id)
   if (error) throw error
 }
 // todos os produtos de todos os fornecedores (para puxar no orçamento)
@@ -339,6 +388,47 @@ export async function getObraPublica(token) {
   return obra
 }
 
+// ---- catálogo do cliente (personalização) — cliente NÃO vê o fornecedor ----
+export async function catalogoPublico(token) {
+  const { data, error } = await supabase.rpc('catalogo_publico', { p_token: token })
+  if (error) throw error
+  return (data || []).map((p) => ({ ...p, imagemUrl: catalogoImagemUrl(p.imagem) }))
+}
+export async function minhasSelecoes(token) {
+  const { data, error } = await supabase.rpc('minhas_selecoes', { p_token: token })
+  if (error) throw error
+  return data || []
+}
+export async function salvarSelecoes(token, itens) {
+  const { data, error } = await supabase.rpc('salvar_selecoes', { p_token: token, p_itens: itens })
+  if (error) throw error
+  return data
+}
+// lado da equipe: ler / mover status das escolhas do cliente
+export async function listSelecoes(obraId) {
+  const { data, error } = await supabase
+    .from('obra_selecoes')
+    .select('id,produto_id,item,categoria,preco_cliente,quantidade,ambiente,status,no_orcado,criado_em')
+    .eq('obra_id', obraId)
+    .order('criado_em', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+export async function setSelecaoStatus(id, status) {
+  const { error } = await supabase.from('obra_selecoes').update({ status }).eq('id', id)
+  if (error) throw error
+}
+export async function deleteSelecao(id) {
+  const { error } = await supabase.from('obra_selecoes').delete().eq('id', id)
+  if (error) throw error
+}
+// soma as escolhas aprovadas ao orçado da obra (usa o preço de cliente = receita, margem protegida)
+export async function somarSelecoesAoOrcado(obraId, ids, novoOrcado) {
+  await setOrcado(obraId, novoOrcado)
+  const { error } = await supabase.from('obra_selecoes').update({ no_orcado: true }).in('id', ids)
+  if (error) throw error
+}
+
 // ---- orçamentos (salvar a proposta da calculadora) ----
 export async function saveOrcamento(meta, rows) {
   const total = rows.reduce((t, r) => t + (Number(r.qtd) || 0) * (Number(r.valor) || 0), 0)
@@ -373,4 +463,40 @@ export async function saveOrcamento(meta, rows) {
 export async function listGestores() {
   const { data } = await supabase.from('profiles').select('id,nome,email,papel').in('papel', ['admin', 'gestor'])
   return data || []
+}
+
+// ---- Módulo TIME: times e tarefas ----
+export async function listTimes() {
+  const { data, error } = await supabase.from('times').select('*').order('criado_em', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+export async function addTime(t) {
+  const { data, error } = await supabase.from('times').insert(t).select('id').single()
+  if (error) throw error
+  return data.id
+}
+export async function deleteTime(id) {
+  const { error } = await supabase.from('times').delete().eq('id', id)
+  if (error) throw error
+}
+export async function listTarefas() {
+  const { data, error } = await supabase
+    .from('tarefas')
+    .select('id,time_id,obra_id,titulo,descricao,responsavel,prazo,status,criado_em,obras(nome),times(nome,tipo,cor)')
+    .order('criado_em', { ascending: false })
+  if (error) throw error
+  return (data || []).map((t) => ({ ...t, obra_nome: t.obras?.nome, time_nome: t.times?.nome, time_tipo: t.times?.tipo, time_cor: t.times?.cor }))
+}
+export async function addTarefa(t) {
+  const { error } = await supabase.from('tarefas').insert(t)
+  if (error) throw error
+}
+export async function updateTarefa(id, fields) {
+  const { error } = await supabase.from('tarefas').update(fields).eq('id', id)
+  if (error) throw error
+}
+export async function deleteTarefa(id) {
+  const { error } = await supabase.from('tarefas').delete().eq('id', id)
+  if (error) throw error
 }

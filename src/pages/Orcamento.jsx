@@ -15,98 +15,142 @@ const inp = { width: '100%', padding: '10px 12px', border: '1px solid var(--line
  *  partir da área do ambiente × coeficiente; itens "fixo" são contagem direta.
  *  Tudo editável — muda a quantidade ou o valor, muda o total na hora.
  * ======================================================================= */
-const IT = (desc, un, coef, local = '', fixo = false) => ({ desc, un, coef, local, fixo })
+// grupo · descrição · unidade · coef (× área, ou contagem fixa) · local · fixo
+const IT = (grupo, desc, un, coef, local = '', fixo = false) => ({ grupo, desc, un, coef, local, fixo })
+
+// ---- blocos reutilizáveis das instalações (os materiais "escondidos") ----
+// elétrica: eletroduto/fio por m; tomadas/interruptores/pontos por contagem
+const ELET = (tomadas, inter = 1, luz = 1, extra = []) => [
+  IT('Elétrica', 'Eletroduto / mangueira corrugada', 'm', 1.4, 'Interno'),
+  IT('Elétrica', 'Cabo / fio elétrico', 'm', 3.5, 'Interno'),
+  IT('Elétrica', 'Caixas de tomada / interruptor', 'un', tomadas + inter, '', true),
+  IT('Elétrica', 'Tomadas', 'un', tomadas, '', true),
+  IT('Elétrica', 'Interruptores', 'un', inter, '', true),
+  IT('Elétrica', 'Ponto de luz / luminária', 'un', luz, '', true),
+  ...extra,
+]
+// hidráulica: canos e conexões
+const HIDR = (quente = false, extra = []) => [
+  IT('Hidráulica', 'Tubo de água fria (PVC)', 'm', 4, '', true),
+  ...(quente ? [IT('Hidráulica', 'Tubo de água quente (PEX / CPVC)', 'm', 3, '', true)] : []),
+  IT('Hidráulica', 'Tubo de esgoto (PVC)', 'm', 4, '', true),
+  IT('Hidráulica', 'Conexões (joelhos, tês, luvas)', 'cj', 1, '', true),
+  IT('Hidráulica', 'Registros / engates flexíveis', 'un', 2, '', true),
+  ...extra,
+]
 
 const TEMPLATES = {
   Quarto: { area: 12, itens: [
-    IT('Piso porcelanato / laminado', 'm²', 1.0, 'Interno'),
-    IT('Rodapé', 'm', 1.3, 'Interno'),
-    IT('Massa corrida + pintura (paredes)', 'm²', 2.7, 'Interno'),
-    IT('Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
-    IT('Porta interna (folha + batente + ferragem)', 'un', 1, '', true),
-    IT('Janela de alumínio', 'un', 1, '', true),
+    IT('Acabamento', 'Piso porcelanato / laminado', 'm²', 1.0, 'Interno'),
+    IT('Acabamento', 'Rodapé', 'm', 1.3, 'Interno'),
+    IT('Acabamento', 'Massa corrida + pintura (paredes)', 'm²', 2.7, 'Interno'),
+    IT('Acabamento', 'Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
+    IT('Esquadrias', 'Porta interna (folha + batente + ferragem)', 'un', 1, '', true),
+    IT('Esquadrias', 'Janela de alumínio', 'un', 1, '', true),
+    ...ELET(5, 1, 1),
   ]},
   Suíte: { area: 16, itens: [
-    IT('Piso porcelanato / laminado', 'm²', 1.0, 'Interno'),
-    IT('Rodapé', 'm', 1.3, 'Interno'),
-    IT('Massa corrida + pintura (paredes)', 'm²', 2.7, 'Interno'),
-    IT('Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
-    IT('Porta interna (folha + batente + ferragem)', 'un', 1, '', true),
-    IT('Janela de alumínio', 'un', 1, '', true),
-    IT('Marcenaria closet / armário', 'm', 2, '', true),
+    IT('Acabamento', 'Piso porcelanato / laminado', 'm²', 1.0, 'Interno'),
+    IT('Acabamento', 'Rodapé', 'm', 1.3, 'Interno'),
+    IT('Acabamento', 'Massa corrida + pintura (paredes)', 'm²', 2.7, 'Interno'),
+    IT('Acabamento', 'Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
+    IT('Esquadrias', 'Porta interna (folha + batente + ferragem)', 'un', 1, '', true),
+    IT('Esquadrias', 'Janela de alumínio', 'un', 1, '', true),
+    IT('Marcenaria', 'Closet / armário', 'm', 2, '', true),
+    ...ELET(6, 2, 2),
   ]},
   'Sala (estar/jantar)': { area: 22, itens: [
-    IT('Piso porcelanato', 'm²', 1.0, 'Interno'),
-    IT('Rodapé', 'm', 1.2, 'Interno'),
-    IT('Massa corrida + pintura (paredes)', 'm²', 2.6, 'Interno'),
-    IT('Forro de gesso + sanca + pintura', 'm²', 1.0, 'Interno'),
-    IT('Porta de sacada / esquadria', 'un', 1, '', true),
+    IT('Acabamento', 'Piso porcelanato', 'm²', 1.0, 'Interno'),
+    IT('Acabamento', 'Rodapé', 'm', 1.2, 'Interno'),
+    IT('Acabamento', 'Massa corrida + pintura (paredes)', 'm²', 2.6, 'Interno'),
+    IT('Acabamento', 'Forro de gesso + sanca + pintura', 'm²', 1.0, 'Interno'),
+    IT('Esquadrias', 'Porta de sacada / esquadria', 'un', 1, '', true),
+    ...ELET(6, 2, 2),
   ]},
   Cozinha: { area: 12, itens: [
-    IT('Piso porcelanato', 'm²', 1.0, 'Interno'),
-    IT('Revestimento de parede (azulejo/porcelanato)', 'm²', 1.6, 'Interno'),
-    IT('Rodapé', 'm', 1.0, 'Interno'),
-    IT('Massa + pintura (paredes restantes)', 'm²', 1.4, 'Interno'),
-    IT('Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
-    IT('Bancada de granito / quartzo', 'm', 3, '', true),
-    IT('Cuba + torneira', 'cj', 1, '', true),
-    IT('Porta interna', 'un', 1, '', true),
+    IT('Revestimento', 'Piso porcelanato', 'm²', 1.0, 'Interno'),
+    IT('Revestimento', 'Revestimento de parede (azulejo/porcelanato)', 'm²', 1.6, 'Interno'),
+    IT('Acabamento', 'Rodapé', 'm', 1.0, 'Interno'),
+    IT('Acabamento', 'Massa + pintura (paredes restantes)', 'm²', 1.4, 'Interno'),
+    IT('Acabamento', 'Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
+    IT('Marcenaria', 'Bancada de granito / quartzo', 'm', 3, '', true),
+    IT('Louças / Metais', 'Cuba + torneira', 'cj', 1, '', true),
+    IT('Esquadrias', 'Porta interna', 'un', 1, '', true),
+    ...ELET(6, 1, 2, [IT('Elétrica', 'Ponto de força (fogão / coifa)', 'un', 2, '', true)]),
+    ...HIDR(true),
   ]},
   Banheiro: { area: 5, itens: [
-    IT('Piso porcelanato antiderrapante', 'm²', 1.0, 'Interno'),
-    IT('Revestimento de parede (porcelanato)', 'm²', 2.8, 'Interno'),
-    IT('Forro de PVC / gesso', 'm²', 1.0, 'Interno'),
-    IT('Bancada + cuba', 'm', 1.2, '', true),
-    IT('Vaso sanitário (louça)', 'un', 1, '', true),
-    IT('Metais (torneira, chuveiro, registros)', 'cj', 1, '', true),
-    IT('Box de vidro', 'un', 1, '', true),
-    IT('Porta', 'un', 1, '', true),
+    IT('Revestimento', 'Piso porcelanato antiderrapante', 'm²', 1.0, 'Interno'),
+    IT('Revestimento', 'Revestimento de parede (porcelanato)', 'm²', 2.8, 'Interno'),
+    IT('Acabamento', 'Forro de PVC / gesso', 'm²', 1.0, 'Interno'),
+    IT('Marcenaria', 'Bancada + cuba', 'm', 1.2, '', true),
+    IT('Louças / Metais', 'Vaso sanitário (louça)', 'un', 1, '', true),
+    IT('Louças / Metais', 'Metais (torneira, chuveiro, registros)', 'cj', 1, '', true),
+    IT('Esquadrias', 'Box de vidro', 'un', 1, '', true),
+    IT('Esquadrias', 'Porta', 'un', 1, '', true),
+    ...ELET(2, 1, 1, [IT('Elétrica', 'Ponto do chuveiro (cabo 6mm)', 'un', 1, '', true)]),
+    ...HIDR(true),
   ]},
   Lavabo: { area: 3, itens: [
-    IT('Piso porcelanato', 'm²', 1.0, 'Interno'),
-    IT('Revestimento de parede (decorativo)', 'm²', 2.4, 'Interno'),
-    IT('Cuba + vaso (louças)', 'cj', 1, '', true),
-    IT('Metais', 'cj', 1, '', true),
-    IT('Porta', 'un', 1, '', true),
+    IT('Revestimento', 'Piso porcelanato', 'm²', 1.0, 'Interno'),
+    IT('Revestimento', 'Revestimento de parede (decorativo)', 'm²', 2.4, 'Interno'),
+    IT('Louças / Metais', 'Cuba + vaso (louças)', 'cj', 1, '', true),
+    IT('Louças / Metais', 'Metais', 'cj', 1, '', true),
+    IT('Esquadrias', 'Porta', 'un', 1, '', true),
+    ...ELET(1, 1, 1),
+    ...HIDR(false),
   ]},
   'Área de serviço': { area: 6, itens: [
-    IT('Piso porcelanato', 'm²', 1.0, 'Interno'),
-    IT('Revestimento de parede', 'm²', 1.8, 'Interno'),
-    IT('Tanque + torneira', 'cj', 1, '', true),
-    IT('Forro + pintura', 'm²', 1.0, 'Interno'),
-    IT('Porta', 'un', 1, '', true),
+    IT('Revestimento', 'Piso porcelanato', 'm²', 1.0, 'Interno'),
+    IT('Revestimento', 'Revestimento de parede', 'm²', 1.8, 'Interno'),
+    IT('Louças / Metais', 'Tanque + torneira', 'cj', 1, '', true),
+    IT('Acabamento', 'Forro + pintura', 'm²', 1.0, 'Interno'),
+    IT('Esquadrias', 'Porta', 'un', 1, '', true),
+    ...ELET(3, 1, 1, [IT('Elétrica', 'Ponto da máquina de lavar', 'un', 1, '', true)]),
+    ...HIDR(false, [IT('Hidráulica', 'Ponto de esgoto máquina / tanque', 'un', 2, '', true)]),
   ]},
   'Varanda / Sacada': { area: 8, itens: [
-    IT('Piso porcelanato externo', 'm²', 1.0, 'Externo'),
-    IT('Guarda-corpo (vidro / alumínio)', 'm', 4, '', true),
-    IT('Forro', 'm²', 1.0, 'Externo'),
-    IT('Pintura / textura', 'm²', 1.6, 'Externo'),
+    IT('Acabamento', 'Piso porcelanato externo', 'm²', 1.0, 'Externo'),
+    IT('Esquadrias', 'Guarda-corpo (vidro / alumínio)', 'm', 4, '', true),
+    IT('Acabamento', 'Forro', 'm²', 1.0, 'Externo'),
+    IT('Acabamento', 'Pintura / textura', 'm²', 1.6, 'Externo'),
+    ...ELET(2, 1, 1),
   ]},
   'Circulação / Hall': { area: 6, itens: [
-    IT('Piso porcelanato', 'm²', 1.0, 'Interno'),
-    IT('Rodapé', 'm', 1.3, 'Interno'),
-    IT('Massa + pintura', 'm²', 2.6, 'Interno'),
-    IT('Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
+    IT('Acabamento', 'Piso porcelanato', 'm²', 1.0, 'Interno'),
+    IT('Acabamento', 'Rodapé', 'm', 1.3, 'Interno'),
+    IT('Acabamento', 'Massa + pintura', 'm²', 2.6, 'Interno'),
+    IT('Acabamento', 'Forro de gesso + pintura', 'm²', 1.0, 'Interno'),
+    ...ELET(1, 1, 1),
   ]},
   'Área externa / Fachada': { area: 30, itens: [
-    IT('Revestimento de fachada', 'm²', 1.0, 'Externo'),
-    IT('Pintura externa (textura)', 'm²', 1.0, 'Externo'),
-    IT('Piso / calçada', 'm²', 0.5, 'Externo'),
+    IT('Revestimento', 'Revestimento de fachada', 'm²', 1.0, 'Externo'),
+    IT('Acabamento', 'Pintura externa (textura)', 'm²', 1.0, 'Externo'),
+    IT('Acabamento', 'Piso / calçada', 'm²', 0.5, 'Externo'),
+    ...ELET(2, 1, 2, [IT('Elétrica', 'Arandelas / iluminação externa', 'un', 2, '', true)]),
   ]},
 }
 const TIPOS = Object.keys(TEMPLATES)
+// ordem de exibição dos grupos dentro do ambiente
+const ORDEM_GRUPO = ['Revestimento', 'Acabamento', 'Esquadrias', 'Marcenaria', 'Louças / Metais', 'Elétrica', 'Hidráulica', 'Outros']
 
 function qtdInicial(it, area) {
   if (it.fixo) return it.coef
   if (/m²|m2|m\b/.test(it.un)) return Math.max(1, Math.round(area * it.coef))
   return it.coef
 }
+function ordenarItens(itens) {
+  return [...itens].sort((a, b) => {
+    const ga = ORDEM_GRUPO.indexOf(a.grupo || 'Outros'), gb = ORDEM_GRUPO.indexOf(b.grupo || 'Outros')
+    return (ga < 0 ? 99 : ga) - (gb < 0 ? 99 : gb)
+  })
+}
 function montarAmbiente(tipo) {
   const t = TEMPLATES[tipo]
   return {
     id: Math.random().toString(36).slice(2),
     tipo, nome: tipo, area: t.area,
-    itens: t.itens.map((it) => ({ desc: it.desc, un: it.un, local: it.local, fixo: it.fixo, coef: it.coef, qtd: qtdInicial(it, t.area), valor: 0 })),
+    itens: ordenarItens(t.itens.map((it) => ({ grupo: it.grupo, desc: it.desc, un: it.un, local: it.local, fixo: it.fixo, coef: it.coef, qtd: qtdInicial(it, t.area), valor: 0 }))),
   }
 }
 
@@ -231,10 +275,10 @@ function Ambientes() {
     itens: a.itens.map((i) => (i.fixo ? i : { ...i, qtd: qtdInicial({ un: i.un, coef: i.coef, fixo: i.fixo }, Number(area) || 0) })),
   }))
   const setItem = (id, idx, k, v) => upd(id, (a) => ({ ...a, itens: a.itens.map((i, j) => (j === idx ? { ...i, [k]: v } : i)) }))
-  const addItem = (id) => upd(id, (a) => ({ ...a, itens: [...a.itens, { desc: 'Novo item', un: 'un', local: '', fixo: true, coef: 1, qtd: 1, valor: 0 }] }))
+  const addItem = (id) => upd(id, (a) => ({ ...a, itens: [...a.itens, { grupo: 'Outros', desc: 'Novo item', un: 'un', local: '', fixo: true, coef: 1, qtd: 1, valor: 0 }] }))
   const delItem = (id, idx) => upd(id, (a) => ({ ...a, itens: a.itens.filter((_, j) => j !== idx) }))
   function puxarFornecedor(id, p) {
-    upd(id, (a) => ({ ...a, itens: [...a.itens, { desc: p.produto, un: p.unidade || 'un', local: '', fixo: true, coef: 1, qtd: 1, valor: Number(p.valor) || 0 }] }))
+    upd(id, (a) => ({ ...a, itens: [...a.itens, { grupo: 'Outros', desc: p.produto, un: p.unidade || 'un', local: '', fixo: true, coef: 1, qtd: 1, valor: Number(p.valor) || 0 }] }))
     setPicker(null)
   }
 
@@ -285,7 +329,11 @@ function Ambientes() {
               ))}</tr></thead>
               <tbody>
                 {a.itens.map((i, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--line2)' }}>
+                  <Fragment key={idx}>
+                  {(idx === 0 || a.itens[idx - 1].grupo !== i.grupo) && (
+                    <tr><td colSpan="7" style={{ padding: '8px 12px 3px', fontSize: 10, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--accent2)', fontWeight: 700, background: 'var(--surface2)' }}>{i.grupo || 'Outros'}</td></tr>
+                  )}
+                  <tr style={{ borderBottom: '1px solid var(--line2)' }}>
                     <td style={{ padding: '5px 12px' }}><input value={i.desc} onChange={(e) => setItem(a.id, idx, 'desc', e.target.value)} style={cell} /></td>
                     <td style={{ padding: '5px 12px', width: 84 }}>
                       <select value={i.local || ''} onChange={(e) => setItem(a.id, idx, 'local', e.target.value)} style={{ ...cell, fontSize: 12 }}>
@@ -297,6 +345,7 @@ function Ambientes() {
                     <td className="mono" style={{ padding: '5px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{BRL((Number(i.qtd) || 0) * (Number(i.valor) || 0))}</td>
                     <td style={{ padding: '5px 8px', width: 24 }}><button className="muted" onClick={() => delItem(a.id, idx)} style={{ fontSize: 14 }}>×</button></td>
                   </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

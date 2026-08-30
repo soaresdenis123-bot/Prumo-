@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { getObraPublica, progresso } from '../lib/data'
 import PlumbMark from '../components/PlumbMark'
 import CasaProgresso from '../components/CasaProgresso'
+import Personalizacao from './Personalizacao'
 
 export default function PublicObra() {
   const { token } = useParams()
@@ -55,6 +56,8 @@ export default function PublicObra() {
           <CasaProgresso etapas={obra.etapas} pavimentos={obra.pavimentos} />
           <div className="muted" style={{ fontSize: 12, textAlign: 'center', marginTop: 8 }}>Do esqueleto em steel frame até a chave na mão — a ilustração avança conforme sua obra.</div>
         </div>
+
+        <Personalizacao token={token} />
 
         <div className="card" style={{ padding: '8px 20px', marginTop: 20 }}>
           <div className="sec-title" style={{ paddingTop: 14 }}>Linha do tempo da sua casa</div>

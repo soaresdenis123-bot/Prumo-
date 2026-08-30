@@ -20,6 +20,9 @@ const IconDoc = () => (
 const IconTruck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4h14v11H1zM15 8h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
 )
+const IconTeam = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="7" r="3"/><path d="M2 21v-2a5 5 0 015-5h4a5 5 0 015 5v2"/><path d="M16 3.5a3 3 0 010 5.8M22 21v-2a5 5 0 00-3-4.5"/></svg>
+)
 
 export default function Layout({ children }) {
   const { profile, signOut, isStaff } = useAuth()
@@ -42,6 +45,7 @@ export default function Layout({ children }) {
           {isStaff && <div className="lbl">Interno</div>}
           {isStaff && <NavLink to="/financeiro"><IconFin />Financeiro</NavLink>}
           {isStaff && <NavLink to="/fornecedores"><IconTruck />Fornecedores</NavLink>}
+          {isStaff && <NavLink to="/time"><IconTeam />Time</NavLink>}
         </nav>
         <div className="foot">
           <div className="who">

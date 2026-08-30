@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getObra, updateEtapa, listFotosObra, uploadFoto, deleteAnexo, updateObra, listGestores, resumoCustos, progresso, BRL } from '../lib/data'
+import { getObra, updateEtapa, listFotosObra, uploadFoto, deleteAnexo, updateObra, listGestores, listFornecedores, resumoCustos, progresso, BRL } from '../lib/data'
 import { orcadoDe } from './Painel'
 import { useAuth } from '../lib/auth'
 import ProdutosObra from './ProdutosObra'
+import SelecoesCliente from './SelecoesCliente'
 import CasaProgresso from '../components/CasaProgresso'
 
 const HOJE = new Date()
+const dtInput = { padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 7, background: 'var(--surface)', color: 'var(--ink)', fontSize: 11.5, fontFamily: 'IBM Plex Mono' }
+const CAT_LABEL = { mao_obra: 'Mão de obra', material: 'Material', fornecedor: 'Fornecedores' }
 
 function Row({ k, v }) {
   return (
@@ -16,11 +19,6 @@ function Row({ k, v }) {
   )
 }
 
-const dtInput = { padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 7, background: 'var(--surface)', color: 'var(--ink)', fontSize: 11.5, fontFamily: 'IBM Plex Mono' }
-
-const CAT_LABEL = { mao_obra: 'Mão de obra', material: 'Material', fornecedor: 'Fornecedores' }
-
-// Resumo de custos por categoria (pendente/pago) — read-only. Lançamento fica no Financeiro.
 function CustoOverview({ obraId }) {
   const [r, setR] = useState(null)
   useEffect(() => { resumoCustos(obraId).then(setR).catch(() => setR(null)) }, [obraId])
@@ -51,7 +49,7 @@ function CustoOverview({ obraId }) {
   )
 }
 
-function Etapa({ etapa, obraId, anexos, onChange, onFoto }) {
+function Etapa({ etapa, obraId, anexos, executores, onChange, onFoto }) {
   const fotoRef = useRef()
   const docRef = useRef()
   const [busy, setBusy] = useState(false)
@@ -69,10 +67,9 @@ function Etapa({ etapa, obraId, anexos, onChange, onFoto }) {
     const status = pct >= 100 ? 'concluida' : pct > 0 ? 'andamento' : 'pendente'
     await updateEtapa(etapa.id, { status, pct }); onChange()
   }
-  async function setData(campo, v) { await updateEtapa(etapa.id, { [campo]: v || null }); onChange() }
+  async function setCampo(campo, v) { await updateEtapa(etapa.id, { [campo]: v || null }); onChange() }
   async function upload(e, tipo) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0]; if (!file) return
     setBusy(true)
     try { await uploadFoto(obraId, etapa.id, file, tipo); await onFoto() }
     catch (err) { alert('Falha no upload: ' + err.message) }
@@ -91,9 +88,16 @@ function Etapa({ etapa, obraId, anexos, onChange, onFoto }) {
           </span>
           {atrasada && <span className="pill" style={{ background: 'var(--crit-bg)', color: 'var(--crit)' }}><span className="d" style={{ background: 'var(--crit)' }} />Atrasada</span>}
         </div>
-        <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
-          <label style={{ fontSize: 11, color: 'var(--ink3)' }}>Início<br /><input type="date" value={etapa.inicio || ''} onChange={(e) => setData('inicio', e.target.value)} style={dtInput} /></label>
-          <label style={{ fontSize: 11, color: 'var(--ink3)' }}>Prazo<br /><input type="date" value={etapa.fim || ''} onChange={(e) => setData('fim', e.target.value)} style={dtInput} /></label>
+        <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <label style={{ fontSize: 11, color: 'var(--ink3)' }}>Início<br /><input type="date" value={etapa.inicio || ''} onChange={(e) => setCampo('inicio', e.target.value)} style={dtInput} /></label>
+          <label style={{ fontSize: 11, color: 'var(--ink3)' }}>Prazo<br /><input type="date" value={etapa.fim || ''} onChange={(e) => setCampo('fim', e.target.value)} style={dtInput} /></label>
+          <label style={{ fontSize: 11, color: 'var(--ink3)' }}>Executor (mão de obra)<br />
+            <select value={etapa.executor_id || ''} onChange={(e) => setCampo('executor_id', e.target.value)}
+              style={{ ...dtInput, minWidth: 150, fontFamily: 'inherit' }}>
+              <option value="">— definir —</option>
+              {executores.map((f) => <option key={f.id} value={f.id}>{f.nome}{f.tipo === 'mao_obra' ? '' : ' · ' + (f.categoria || 'forn.')}</option>)}
+            </select>
+          </label>
         </div>
         {imgs.length > 0 && (
           <div className="photos">
@@ -138,13 +142,87 @@ function Etapa({ etapa, obraId, anexos, onChange, onFoto }) {
   )
 }
 
+// ---------- Painel visual da obra ----------
+function PainelObra({ obra, fotos, executores, onChange, onFoto }) {
+  const etapas = obra.etapas || []
+  const p = progresso(etapas)
+  const done = etapas.filter((e) => e.status === 'concluida').length
+  const agora = etapas.find((e) => e.status === 'andamento')
+  const proxima = etapas.find((e) => e.status === 'pendente')
+  const atrasadas = etapas.filter((e) => e.fim && e.status !== 'concluida' && new Date(e.fim) < HOJE)
+  const execNome = (id) => executores.find((f) => f.id === id)?.nome
+  // galeria: últimas fotos (não-doc) de todas as etapas
+  const galeria = []
+  Object.values(fotos || {}).forEach((arr) => arr.filter((a) => a.tipo !== 'doc').forEach((a) => galeria.push(a)))
+  galeria.reverse()
+
+  const stat = (label, valor, sub, cor) => (
+    <div className="card" style={{ padding: '14px 16px' }}>
+      <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--ink3)', fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: 17, fontWeight: 700, marginTop: 4, color: cor || 'var(--ink)', lineHeight: 1.15 }}>{valor}</div>
+      {sub && <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{sub}</div>}
+    </div>
+  )
+
+  return (
+    <div className="obra-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+      <div>
+        {/* barra geral */}
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+            <div className="sec-title" style={{ margin: 0 }}>Andamento geral</div>
+            <div><b className="mono" style={{ fontSize: 18 }}>{p}%</b> <span className="muted" style={{ fontSize: 12 }}>· {done}/{etapas.length} etapas</span></div>
+          </div>
+          <div className="bar" style={{ height: 12 }}><i style={{ width: p + '%', background: 'var(--accent)' }} /></div>
+        </div>
+
+        {/* agora / próxima / atrasos */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 18 }}>
+          {stat('Agora', agora ? agora.nome : '—', agora ? (agora.pct + '%' + (execNome(agora.executor_id) ? ' · ' + execNome(agora.executor_id) : '')) : 'nada em andamento', 'var(--accent2)')}
+          {stat('Próxima', proxima ? proxima.nome : '—', proxima ? 'a iniciar' : 'tudo em dia')}
+          {stat('Atrasadas', atrasadas.length, atrasadas.length ? atrasadas[0].nome : 'no prazo', atrasadas.length ? 'var(--crit)' : 'var(--ok)')}
+        </div>
+
+        {/* galeria de fotos recentes */}
+        {galeria.length > 0 && (
+          <div className="card" style={{ padding: 16, marginBottom: 18 }}>
+            <div className="sec-title" style={{ marginTop: 0 }}>Fotos recentes da obra</div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {galeria.slice(0, 12).map((f) => (
+                <a key={f.id} href={f.url} target="_blank" rel="noreferrer" style={{ flex: 'none' }}>
+                  <img src={f.url} alt="" style={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 9, border: '1px solid var(--line)' }} />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* lista de etapas */}
+        <div className="card" style={{ padding: '8px 20px' }}>
+          {etapas.map((e) => (
+            <Etapa key={e.id} etapa={e} obraId={obra.id} anexos={fotos[e.id]} executores={executores} onChange={onChange} onFoto={onFoto} />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ position: 'sticky', top: 82 }}>
+        <div className="sec-title" style={{ marginTop: 0 }}>Casa em construção</div>
+        <CasaProgresso etapas={etapas} pavimentos={obra.pavimentos} />
+        <div className="muted" style={{ fontSize: 11.5, textAlign: 'center', marginTop: 8 }}>É isto que o cliente vê no link dele.</div>
+        <CustoOverview obraId={obra.id} />
+      </div>
+    </div>
+  )
+}
+
 export default function ObraDetail() {
   const { id } = useParams()
   const { isAdmin, isStaff } = useAuth()
   const [obra, setObra] = useState(null)
   const [fotos, setFotos] = useState({})
   const [gestores, setGestores] = useState([])
-  const [tab, setTab] = useState('etapas')
+  const [execs, setExecs] = useState([])
+  const [tab, setTab] = useState('painel')
   const [copied, setCopied] = useState(false)
   const [err, setErr] = useState('')
 
@@ -152,6 +230,7 @@ export default function ObraDetail() {
   async function loadFotos() { try { setFotos(await listFotosObra(id)) } catch { /* opcional */ } }
   useEffect(() => { load(); loadFotos() }, [id])
   useEffect(() => { if (isAdmin) listGestores().then(setGestores) }, [isAdmin])
+  useEffect(() => { if (isStaff) listFornecedores().then((fs) => setExecs(fs.sort((a, b) => (a.tipo === 'mao_obra' ? -1 : 1)))).catch(() => {}) }, [isStaff])
 
   async function trocarGestor(gid) { await updateObra(id, { gestor_id: gid }); load() }
 
@@ -159,6 +238,8 @@ export default function ObraDetail() {
   if (!obra) return <div className="spin" />
   const p = progresso(obra.etapas)
   const linkCliente = obra.share_token ? `${window.location.origin}/o/${obra.share_token}` : null
+
+  const tabs = [['painel', 'Painel da obra'], ...(isStaff ? [['personalizacao', 'Personalização'], ['produtos', 'Produtos']] : []), ['dados', 'Dados']]
 
   return (
     <>
@@ -189,8 +270,8 @@ export default function ObraDetail() {
           </div>
         )}
 
-        <div className="tabbar" style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--line)', marginBottom: 20 }}>
-          {[['etapas', 'Etapas & anexos'], ...(isStaff ? [['produtos', 'Produtos']] : []), ['dados', 'Dados da obra']].map(([t, lbl]) => (
+        <div className="tabbar" style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--line)', marginBottom: 20, flexWrap: 'wrap' }}>
+          {tabs.map(([t, lbl]) => (
             <button key={t} onClick={() => setTab(t)}
               style={{ padding: '10px 15px', fontSize: 13.5, fontWeight: 600, color: tab === t ? 'var(--accent2)' : 'var(--ink3)', borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent', marginBottom: -1 }}>
               {lbl}
@@ -198,19 +279,13 @@ export default function ObraDetail() {
           ))}
         </div>
 
-        {tab === 'etapas' && (
-          <div className="obra-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
-            <div className="card" style={{ padding: '8px 20px' }}>
-              {obra.etapas.map((e) => (
-                <Etapa key={e.id} etapa={e} obraId={obra.id} anexos={fotos[e.id]} onChange={load} onFoto={loadFotos} />
-              ))}
-            </div>
-            <div style={{ position: 'sticky', top: 82 }}>
-              <div className="sec-title" style={{ marginTop: 0 }}>Casa em construção</div>
-              <CasaProgresso etapas={obra.etapas} pavimentos={obra.pavimentos} />
-              <div className="muted" style={{ fontSize: 11.5, textAlign: 'center', marginTop: 8 }}>É isto que o cliente vê no link dele.</div>
-              {isStaff && <CustoOverview obraId={obra.id} />}
-            </div>
+        {tab === 'painel' && <PainelObra obra={obra} fotos={fotos} executores={execs} onChange={load} onFoto={loadFotos} />}
+
+        {tab === 'personalizacao' && isStaff && (
+          <div style={{ maxWidth: 720 }}>
+            <div className="pg-sub" style={{ margin: '-4px 0 14px' }}>O que o cliente escolheu no link dele. Aprove o que fecha e some ao orçado — o preço de cliente já tem sua margem.</div>
+            <SelecoesCliente obra={obra} onOrcado={load} />
+            <div className="muted" style={{ fontSize: 12, marginTop: 14 }}>Sem escolhas ainda? O cliente monta no link acima, seção “Personalize sua casa”.</div>
           </div>
         )}
 
