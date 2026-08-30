@@ -25,9 +25,20 @@ export default function CasaProgresso({ etapas = [], pavimentos = 1 }) {
   const eaveOver = 12
   const floorY = (bodyTop + bodyBot) / 2 // linha de piso (sobrado)
 
-  // montantes do frame
+  // montantes do frame (densos, como steel frame real)
   const studs = []
-  for (let x = L + 16; x < R; x += 16) studs.push(x)
+  for (let x = L + 9; x <= R - 9; x += 11) studs.push(x)
+  // perfil do telhado (2 águas + hip) em função de x — para as treliças
+  const roofY = (x) => {
+    if (x <= L + 46) return bodyTop + (ridgeY - bodyTop) * (x - (L - eaveOver)) / ((L + 46) - (L - eaveOver))
+    if (x >= R - 46) return ridgeY + (bodyTop - ridgeY) * (x - (R - 46)) / ((R + eaveOver) - (R - 46))
+    return ridgeY
+  }
+  const webXs = []
+  for (let x = L + 4; x <= R - 4; x += 18) webXs.push(x)
+  // barras de piso (entrepiso do sobrado)
+  const pisoXs = []
+  for (let x = L + 6; x <= R - 6; x += 14) pisoXs.push(x)
 
   // janelas (grandes panos)
   const glowOp = fVidro * (0.35 + 0.65 * fFach) // luz interna cresce no fim
@@ -52,7 +63,7 @@ export default function CasaProgresso({ etapas = [], pavimentos = 1 }) {
             <stop offset="0" stopColor="#9A6B3F" /><stop offset="1" stopColor="#7E5632" />
           </linearGradient>
           <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#B9C6D2" /><stop offset="1" stopColor="#8A9AA8" />
+            <stop offset="0" stopColor="#93A3B0" /><stop offset="1" stopColor="#5A6A79" />
           </linearGradient>
           <radialGradient id="glow" cx="0.5" cy="0.5" r="0.6">
             <stop offset="0" stopColor="#FBE6B0" /><stop offset="1" stopColor="#F3D48A" />
@@ -70,18 +81,50 @@ export default function CasaProgresso({ etapas = [], pavimentos = 1 }) {
           <rect x={L - 10} y={bodyBot + 12} width={R - L + 20} height="4" fill="#A9AFB8" />
         </g>
 
-        {/* esqueleto steel frame */}
-        <g stroke="url(#steel)" strokeWidth="1.5" fill="none" opacity={0.35 + 0.55 * fEstru} style={T} strokeLinecap="round">
-          <rect x={L} y={bodyTop} width={R - L} height={bodyBot - bodyTop} />
-          {dois && <line x1={L} y1={floorY} x2={R} y2={floorY} strokeWidth="2.2" />}
-          {studs.map((x, i) => <line key={i} x1={x} y1={bodyTop} x2={x} y2={bodyBot} />)}
-          {/* telhado 4 águas (linhas) */}
-          <polyline points={`${L - eaveOver},${bodyTop} ${L + 46},${ridgeY} ${R - 46},${ridgeY} ${R + eaveOver},${bodyTop}`} />
-          <line x1={L - eaveOver} y1={bodyTop} x2={R + eaveOver} y2={bodyTop} />
-          {/* treliças */}
-          {[...Array(8)].map((_, i) => { const x = L + 20 + i * ((R - L - 40) / 7); return <line key={'t' + i} x1={x} y1={bodyTop} x2={(L + R) / 2} y2={ridgeY} opacity="0.5" /> })}
-          <line x1={L} y1={bodyBot} x2={L + 34} y2={dois ? floorY : bodyTop} />
-          <line x1={R} y1={bodyBot} x2={R - 34} y2={dois ? floorY : bodyTop} />
+        {/* esqueleto steel frame (condizente com light steel framing real) */}
+        <g stroke="#6E7C89" fill="none" opacity={0.45 + 0.5 * fEstru} style={T} strokeLinecap="round">
+          {/* guias horizontais (base, topo e entre pisos) */}
+          <g strokeWidth="2.4">
+            <line x1={L} y1={bodyBot} x2={R} y2={bodyBot} />
+            <line x1={L} y1={bodyTop} x2={R} y2={bodyTop} />
+            {dois && <line x1={L} y1={floorY - 5} x2={R} y2={floorY - 5} />}
+            {dois && <line x1={L} y1={floorY + 5} x2={R} y2={floorY + 5} />}
+          </g>
+          {/* montantes verticais (densos) */}
+          <g strokeWidth="1.7">
+            {studs.map((x, i) => <line key={i} x1={x} y1={bodyTop} x2={x} y2={bodyBot} />)}
+          </g>
+          {/* noggins (travessas horizontais no meio de cada pé-direito) */}
+          <g strokeWidth="1" opacity="0.8">
+            {dois
+              ? <>
+                  <line x1={L} y1={(bodyTop + floorY) / 2} x2={R} y2={(bodyTop + floorY) / 2} />
+                  <line x1={L} y1={(floorY + bodyBot) / 2} x2={R} y2={(floorY + bodyBot) / 2} />
+                </>
+              : <line x1={L} y1={(bodyTop + bodyBot) / 2} x2={R} y2={(bodyTop + bodyBot) / 2} />}
+          </g>
+          {/* entrepiso (vigas de piso do sobrado) — treliça zig-zag */}
+          {dois && (
+            <g strokeWidth="1.1">
+              <polyline points={pisoXs.map((x, i) => `${x},${i % 2 ? floorY + 4 : floorY - 4}`).join(' ')} />
+            </g>
+          )}
+          {/* travamentos em X nas extremidades */}
+          <g strokeWidth="1.2" opacity="0.85">
+            <line x1={L} y1={dois ? floorY : bodyTop} x2={L + 46} y2={bodyBot} /><line x1={L + 46} y1={dois ? floorY : bodyTop} x2={L} y2={bodyBot} />
+            <line x1={R} y1={dois ? floorY : bodyTop} x2={R - 46} y2={bodyBot} /><line x1={R - 46} y1={dois ? floorY : bodyTop} x2={R} y2={bodyBot} />
+            {dois && <><line x1={L} y1={bodyTop} x2={L + 46} y2={floorY - 5} /><line x1={L + 46} y1={bodyTop} x2={L} y2={floorY - 5} /><line x1={R} y1={bodyTop} x2={R - 46} y2={floorY - 5} /><line x1={R - 46} y1={bodyTop} x2={R} y2={floorY - 5} /></>}
+          </g>
+          {/* cobertura em treliças */}
+          <g strokeWidth="1.3">
+            <line x1={L - eaveOver} y1={bodyTop} x2={R + eaveOver} y2={bodyTop} />
+            <polyline points={`${L - eaveOver},${bodyTop} ${L + 46},${ridgeY} ${R - 46},${ridgeY} ${R + eaveOver},${bodyTop}`} />
+            <line x1={L + 46} y1={ridgeY} x2={R - 46} y2={ridgeY} />
+          </g>
+          <g strokeWidth="0.9" opacity="0.8">
+            {webXs.map((x, i) => <line key={'v' + i} x1={x} y1={bodyTop} x2={x} y2={roofY(x)} />)}
+            {webXs.slice(0, -1).map((x, i) => <line key={'d' + i} x1={x} y1={roofY(x)} x2={webXs[i + 1]} y2={bodyTop} />)}
+          </g>
         </g>
 
         {/* paredes (render) */}
