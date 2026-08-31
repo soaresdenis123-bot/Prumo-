@@ -165,11 +165,14 @@ create table if not exists public.orcamento_itens (
   id            uuid primary key default gen_random_uuid(),
   orcamento_id  uuid not null references public.orcamentos(id) on delete cascade,
   categoria     text,
+  grupo_cat     text,            -- categoria de VERBA (Revestimentos, Elétrica, …)
   item          text,
   qtd           numeric not null default 1,
   unidade       text default 'un',
   valor_unit    numeric not null default 0
 );
+-- pra bancos que já tinham a tabela sem a coluna:
+alter table public.orcamento_itens add column if not exists grupo_cat text;
 create index if not exists idx_orc_itens on public.orcamento_itens (orcamento_id);
 
 -- =====================================================================

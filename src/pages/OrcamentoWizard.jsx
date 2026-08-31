@@ -20,7 +20,7 @@ const ELET = (tom, int = 1, luz = 1, ex = []) => [
   AU('Caixas + módulos', 'un', tom + int, 4, '', true, 'Elétrica'),
   AU('Tomadas', 'un', tom, 9, '', true, 'Elétrica'),
   AU('Interruptores', 'un', int, 8, '', true, 'Elétrica'),
-  CH('Luminárias', 'un', luz, [T('LED sobrepor', 35), T('Plafon / spot', 60), T('Pendente / design', 180)], '', true, 'Elétrica'),
+  CH('Luminárias', 'un', luz, [T('LED sobrepor', 35), T('Plafon / spot', 60), T('Pendente / design', 180)], '', true, 'Iluminação'),
   ...ex,
 ]
 const HIDR = (q = false) => [
@@ -58,6 +58,17 @@ const FEATURES = [
   { key: 'gourmet', nome: 'Área gourmet / churrasqueira', it: () => CH('Área gourmet', 'vb', 1, [T('Simples', 4000), T('Média', 8000), T('Completa', 15000)], '', true, 'Externo') },
 ]
 const TELHADOS = [['Fibrocimento', 0], ['Cerâmico', 1], ['Shingle', 2], ['Metálico sanduíche', 2], ['Laje impermeabilizada', 1]]
+
+// mapa: categoria "de obra" do item (g) → categoria de VERBA (mesma linguagem das
+// escolhas do cliente e dos fornecedores), pra verba e desconto baterem certo.
+const GCAT = {
+  Preliminares: 'Fundação', Fundação: 'Fundação', Estrutura: 'Estrutura Steel Frame',
+  Fechamento: 'Fechamento & Isolamento', Cobertura: 'Cobertura', Instalações: 'Elétrica',
+  Fachada: 'Pintura', Entrega: 'Outros', Revestimento: 'Revestimentos', Acabamento: 'Acabamentos',
+  Esquadrias: 'Esquadrias', Elétrica: 'Elétrica', Iluminação: 'Iluminação', Hidráulica: 'Hidráulica',
+  'Louças/Metais': 'Louças / Metais', Marcenaria: 'Marcenaria', Externo: 'Jardinagem',
+}
+const catDe = (it) => GCAT[it.g] || 'Outros'
 
 function qtd(it, area) { if (it.fixo) return it.coef; if (/m²|m2|m\b/.test(it.un)) return Math.max(1, Math.round((Number(area) || 0) * it.coef)); return it.coef }
 function valorDe(it) { return it.k === 'ch' ? (it.tiers[it.sel]?.p || 0) : (it.preco || 0) }
@@ -143,7 +154,7 @@ export default function OrcamentoWizard() {
     const rows = []
     grupos.forEach((g) => g.itens.forEach((it) => {
       const v = valorDe(it), q = Number(it.qtd) || 0
-      if (q * v > 0) rows.push({ categoria: g.nome, item: it.desc + (it.k === 'ch' ? ' · ' + it.tiers[it.sel].n : ''), qtd: q, un: it.un, valor: v, local: it.local })
+      if (q * v > 0) rows.push({ categoria: g.nome, grupo: catDe(it), item: it.desc + (it.k === 'ch' ? ' · ' + it.tiers[it.sel].n : ''), qtd: q, un: it.un, valor: v, local: it.local })
     }))
     return rows
   }

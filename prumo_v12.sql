@@ -1,0 +1,13 @@
+-- =====================================================================
+--  PRUMO · v12 — categoria de VERBA no item do orçamento
+--  Cada item do orçamento passa a guardar a categoria de verba (grupo_cat),
+--  na mesma linguagem das escolhas do cliente (Revestimentos, Elétrica,
+--  Louças / Metais, …). Ao aprovar o orçamento, o app usa isso pra definir
+--  a verba de cada parte da obra — e o que o cliente personaliza é
+--  descontado da categoria certa.
+--
+--  Idempotente: pode rodar quantas vezes quiser.
+--  (Se você já roda o prumo_completo.sql atualizado, NÃO precisa deste —
+--   ele já inclui esta coluna.)
+-- =====================================================================
+alter table public.orcamento_itens add column if not exists grupo_cat text;

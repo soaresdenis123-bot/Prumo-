@@ -336,10 +336,35 @@ export async function semearCustosDoOrcamento(orcId, obraId) {
   return rows.length
 }
 
-// aprova um orçamento já ligado a uma obra → gera a lista de custos nela
+// define a verba de cada categoria da obra a partir do orçamento aprovado
+// (grupo_cat = categoria de verba). Só semeia se a obra ainda não tem verbas,
+// pra não sobrescrever ajustes que o gestor já tenha feito à mão.
+export async function semearVerbasDoOrcamento(orcId, obraId) {
+  const { data: existentes } = await supabase.from('obra_verbas').select('id').eq('obra_id', obraId).limit(1)
+  if (existentes && existentes.length) return 0 // já tem verbas — não sobrescreve
+  const itens = await getOrcamentoItens(orcId)
+  const soma = {}
+  itens.forEach((it) => {
+    const cat = it.grupo_cat || it.categoria || 'Outros'
+    soma[cat] = (soma[cat] || 0) + (Number(it.qtd) || 0) * (Number(it.valor_unit) || 0)
+  })
+  const rows = Object.entries(soma)
+    .filter(([, v]) => v > 0)
+    .map(([categoria, valor]) => ({ obra_id: obraId, categoria, valor }))
+  if (rows.length) {
+    const { error } = await supabase.from('obra_verbas').insert(rows)
+    if (error) throw error
+  }
+  return rows.length
+}
+
+// aprova um orçamento já ligado a uma obra → gera a lista de custos e as verbas
 export async function aprovarOrcamento(orc) {
   await supabase.from('orcamentos').update({ status: 'aprovado' }).eq('id', orc.id)
-  if (orc.obra_id) await semearCustosDoOrcamento(orc.id, orc.obra_id)
+  if (orc.obra_id) {
+    await semearCustosDoOrcamento(orc.id, orc.obra_id)
+    await semearVerbasDoOrcamento(orc.id, orc.obra_id)
+  }
   return orc.obra_id || null
 }
 
@@ -355,6 +380,7 @@ export async function orcamentoParaObra(orc, gestorId) {
   })
   await supabase.from('orcamentos').update({ status: 'aprovado', obra_id: id }).eq('id', orc.id)
   await semearCustosDoOrcamento(orc.id, id)
+  await semearVerbasDoOrcamento(orc.id, id)
   return id
 }
 
@@ -526,6 +552,7 @@ export async function saveOrcamento(meta, rows) {
   const itens = rows.map((r) => ({
     orcamento_id: data.id,
     categoria: r.categoria,
+    grupo_cat: r.grupo || null,
     item: r.item,
     qtd: Number(r.qtd) || 0,
     unidade: r.un,
