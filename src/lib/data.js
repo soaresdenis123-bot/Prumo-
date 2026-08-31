@@ -483,6 +483,21 @@ export async function deleteSelecao(id) {
   const { error } = await supabase.from('obra_selecoes').delete().eq('id', id)
   if (error) throw error
 }
+// ---- verbas por categoria (orçamento definido por parte da obra) ----
+export async function listVerbas(obraId) {
+  const { data, error } = await supabase.from('obra_verbas').select('*').eq('obra_id', obraId).order('categoria')
+  if (error) throw error
+  return data || []
+}
+export async function setVerba(obraId, categoria, valor) {
+  const { error } = await supabase.from('obra_verbas').upsert({ obra_id: obraId, categoria, valor: Number(valor) || 0 }, { onConflict: 'obra_id,categoria' })
+  if (error) throw error
+}
+export async function deleteVerba(id) {
+  const { error } = await supabase.from('obra_verbas').delete().eq('id', id)
+  if (error) throw error
+}
+
 // soma as escolhas aprovadas ao orçado da obra (usa o preço de cliente = receita, margem protegida)
 export async function somarSelecoesAoOrcado(obraId, ids, novoOrcado) {
   await setOrcado(obraId, novoOrcado)

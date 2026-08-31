@@ -5,6 +5,7 @@ import { orcadoDe } from './Painel'
 import { useAuth } from '../lib/auth'
 import ProdutosObra from './ProdutosObra'
 import SelecoesCliente from './SelecoesCliente'
+import VerbasCategoria from './VerbasCategoria'
 import CasaProgresso from '../components/CasaProgresso'
 
 const HOJE = new Date()
@@ -284,6 +285,7 @@ export default function ObraDetail() {
         {tab === 'personalizacao' && isStaff && (
           <div style={{ maxWidth: 720 }}>
             <div className="pg-sub" style={{ margin: '-4px 0 14px' }}>O que o cliente escolheu no link dele. Aprove o que fecha e some ao orçado — o preço de cliente já tem sua margem.</div>
+            <VerbasCategoria obra={obra} />
             <SelecoesCliente obra={obra} onOrcado={load} />
             <div className="muted" style={{ fontSize: 12, marginTop: 14 }}>Sem escolhas ainda? O cliente monta no link acima, seção “Personalize sua casa”.</div>
           </div>
