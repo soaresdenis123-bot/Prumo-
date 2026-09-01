@@ -456,6 +456,18 @@ export async function listCustosAll() {
   return soma
 }
 
+// ---- "Monte sua casa" — captação de leads (página pública, sem login) ----
+export async function salvarLeadProjeto(payload) {
+  const { data, error } = await supabase.rpc('salvar_lead_projeto', { p: payload })
+  if (error) throw error
+  return data
+}
+export async function listLeadsProjeto() {
+  const { data, error } = await supabase.from('leads_projeto').select('*').order('criado_em', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
 // ---- link público do cliente (sem login) ----
 export async function getObraPublica(token) {
   const { data, error } = await supabase.rpc('obra_publica', { p_token: token })

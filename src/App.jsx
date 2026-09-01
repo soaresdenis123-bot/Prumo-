@@ -15,6 +15,8 @@ import FinanceiroObra from './pages/FinanceiroObra'
 import Time from './pages/Time'
 import Portal from './pages/Portal'
 import PublicObra from './pages/PublicObra'
+import MonteSuaCasa from './pages/MonteSuaCasa'
+import Leads from './pages/Leads'
 
 function Spinner() {
   return <div className="spin" />
@@ -38,6 +40,7 @@ function AppGated() {
         <Route path="/obra/:id" element={<ObraDetail />} />
         {isStaff && <Route path="/nova" element={<NovaObra />} />}
         {isStaff && <Route path="/orcamento" element={<Orcamento />} />}
+        {isStaff && <Route path="/leads" element={<Leads />} />}
         {isStaff && <Route path="/calculadora" element={<Navigate to="/orcamento" replace />} />}
         {isStaff && <Route path="/orcamentos" element={<Navigate to="/orcamento" replace />} />}
         {isStaff && <Route path="/fornecedores" element={<Fornecedores />} />}
@@ -57,6 +60,8 @@ export default function App() {
     <Routes>
       {/* Link público do cliente — sem login */}
       <Route path="/o/:token" element={<PublicObra />} />
+      {/* Página pública de captação — cliente monta a casa dele */}
+      <Route path="/monte-sua-casa" element={<MonteSuaCasa />} />
       {/* Todo o resto passa pelo login */}
       <Route path="/*" element={<AppGated />} />
     </Routes>
