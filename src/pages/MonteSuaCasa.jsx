@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { salvarLeadProjeto } from '../lib/data'
+import { MODELOS } from '../lib/modelos'
 import PlumbMark from '../components/PlumbMark'
 
 /* =========================================================================
@@ -10,32 +11,24 @@ import PlumbMark from '../components/PlumbMark'
  *  >> Fotos: cada modelo aponta para /modelos/mXX.jpg (pasta public/modelos).
  *     Para trocar/adicionar, é só substituir o arquivo ou editar MODELOS.
  * ======================================================================= */
-const M = (id, tipo, telhado, estilo, nome) => ({
-  id, tipo, telhado, estilo, nome,
-  padrao: tipo === 'sobrado' ? 'alto' : 'medio',
-  img: `/modelos/${id}.jpg`,
-})
-const MODELOS = [
-  M('m01', 'terrea', 'aparente', 'Farm House', 'Farm House 01'),
-  M('m02', 'terrea', 'aparente', 'Farm House', 'Farm House 02'),
-  M('m03', 'terrea', 'aparente', 'Farm House', 'Farm House 03'),
-  M('m04', 'terrea', 'aparente', 'Farm House', 'Farm House 04'),
-  M('m05', 'terrea', 'platibanda', 'Moderna', 'Moderna 01'),
-  M('m06', 'terrea', 'platibanda', 'Moderna', 'Moderna 02'),
-  M('m07', 'terrea', 'platibanda', 'Moderna', 'Moderna 03'),
-  M('m08', 'terrea', 'platibanda', 'Moderna', 'Moderna 04'),
-  M('m09', 'sobrado', 'aparente', 'Sobrado', 'Sobrado 01'),
-  M('m10', 'sobrado', 'aparente', 'Sobrado', 'Sobrado 02'),
-  M('m11', 'sobrado', 'platibanda', 'Sobrado', 'Sobrado 03'),
-  M('m12', 'sobrado', 'platibanda', 'Sobrado', 'Sobrado 04'),
-  M('m13', 'sobrado', 'aparente', 'Alto Padrão', 'Alto Padrão 01'),
-  M('m14', 'sobrado', 'aparente', 'Alto Padrão', 'Alto Padrão 02'),
-  M('m15', 'sobrado', 'platibanda', 'Alto Padrão', 'Alto Padrão 03'),
-  M('m16', 'sobrado', 'platibanda', 'Alto Padrão', 'Alto Padrão 04'),
-]
 const TELHADO_LABEL = { aparente: 'Telhado aparente', platibanda: 'Platibanda' }
 const COMODOS = ['Quartos', 'Suítes', 'Banheiros', 'Lavabo', 'Cozinha', 'Sala de estar', 'Sala de jantar', 'Garagem (vagas)', 'Área de serviço', 'Escritório', 'Varanda']
 const EXTRAS = ['Piscina', 'Área gourmet / churrasqueira', 'Lareira']
+
+// Acabamentos principais que o cliente escolhe (opções de médio e alto padrão)
+const OPT_PISO = {
+  medio: ['Porcelanato acetinado 60×60', 'Porcelanato polido 60×60', 'Piso vinílico / laminado SPC', 'Cerâmica premium'],
+  alto: ['Porcelanato retificado grande formato (90×90 / 120×120)', 'Porcelanato marmorizado polido', 'Porcelanato importado', 'Madeira engenheirada / vinílico premium'],
+}
+const OPT_TELHADO = {
+  medio: ['Telha de concreto', 'Telha cerâmica', 'Telha metálica (galvalume)', 'Fibrocimento com forro'],
+  alto: ['Telha cerâmica esmaltada', 'Telha shingle', 'Laje impermeabilizada / telhado embutido', 'Telha termoacústica (sanduíche)'],
+}
+const OPT_ESQ = {
+  medio: ['Alumínio linha branca', 'PVC', 'Alumínio anodizado'],
+  alto: ['Alumínio premium (preto / amadeirado)', 'PVC alto desempenho', 'Vidro duplo acústico/térmico', 'Vidro de correr amplo / sistema minimal'],
+}
+const ACAB = [['piso', 'Piso', OPT_PISO], ['telhado', 'Telhado (cobertura)', OPT_TELHADO], ['esquadrias', 'Esquadrias (janelas e portas)', OPT_ESQ]]
 const inp = { width: '100%', padding: '11px 13px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface,#fff)', color: 'var(--ink)', fontSize: 14 }
 
 export default function MonteSuaCasa() {
@@ -45,6 +38,7 @@ export default function MonteSuaCasa() {
   const [area, setArea] = useState('')
   const [comodos, setComodos] = useState({})
   const [extras, setExtras] = useState({})
+  const [acab, setAcab] = useState({ piso: '', telhado: '', esquadrias: '' })
   const [form, setForm] = useState({ nome: '', contato: '', cidade: '', obs: '' })
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState('')
@@ -64,6 +58,9 @@ export default function MonteSuaCasa() {
     COMODOS.forEach((c) => { const n = Number(comodos[c]) || 0; if (n > 0) partes.push(`${n} ${c.toLowerCase()}`) })
     const ex = EXTRAS.filter((e) => extras[e])
     if (ex.length) partes.push('extras: ' + ex.join(', ').toLowerCase())
+    if (acab.piso) partes.push('Piso: ' + acab.piso)
+    if (acab.telhado) partes.push('Telhado: ' + acab.telhado)
+    if (acab.esquadrias) partes.push('Esquadrias: ' + acab.esquadrias)
     return partes.join(' · ')
   }
 
@@ -175,6 +172,23 @@ export default function MonteSuaCasa() {
                 </button>
               )
             })}
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--line)', margin: '18px 0 4px', paddingTop: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Acabamentos principais</div>
+            <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Escolha o padrão de piso, cobertura e esquadrias. Pode misturar médio e alto, do seu jeito.</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
+              {ACAB.map(([k, label, opts]) => (
+                <div className="field" key={k}>
+                  <label>{label}</label>
+                  <select style={inp} value={acab[k]} onChange={(e) => setAcab({ ...acab, [k]: e.target.value })}>
+                    <option value="">Selecione…</option>
+                    <optgroup label="Médio padrão">{opts.medio.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>
+                    <optgroup label="Alto padrão">{opts.alto.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>
+                  </select>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
