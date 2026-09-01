@@ -34,12 +34,17 @@ const MODELOS = [
   M('m16', 'sobrado', 'platibanda', 'Alto Padrão', 'Alto Padrão 04'),
 ]
 const TELHADO_LABEL = { aparente: 'Telhado aparente', platibanda: 'Platibanda' }
+const COMODOS = ['Quartos', 'Suítes', 'Banheiros', 'Lavabo', 'Cozinha', 'Sala de estar', 'Sala de jantar', 'Garagem (vagas)', 'Área de serviço', 'Escritório', 'Varanda']
+const EXTRAS = ['Piscina', 'Área gourmet / churrasqueira', 'Lareira']
 const inp = { width: '100%', padding: '11px 13px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface,#fff)', color: 'var(--ink)', fontSize: 14 }
 
 export default function MonteSuaCasa() {
   const [tipo, setTipo] = useState('terrea')
   const [telhado, setTelhado] = useState('todos')
   const [sel, setSel] = useState(null)
+  const [area, setArea] = useState('')
+  const [comodos, setComodos] = useState({})
+  const [extras, setExtras] = useState({})
   const [form, setForm] = useState({ nome: '', contato: '', cidade: '', obs: '' })
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState('')
@@ -50,12 +55,25 @@ export default function MonteSuaCasa() {
     [tipo, telhado]
   )
   const padraoTipo = tipo === 'sobrado' ? 'alto padrão' : 'médio padrão'
+  const setComodo = (c, v) => setComodos({ ...comodos, [c]: Math.max(0, v) })
+
+  // monta o texto do programa da casa (cômodos + extras) pra salvar no lead
+  function programaTexto() {
+    const partes = []
+    if (area) partes.push(`~${area} m²`)
+    COMODOS.forEach((c) => { const n = Number(comodos[c]) || 0; if (n > 0) partes.push(`${n} ${c.toLowerCase()}`) })
+    const ex = EXTRAS.filter((e) => extras[e])
+    if (ex.length) partes.push('extras: ' + ex.join(', ').toLowerCase())
+    return partes.join(' · ')
+  }
 
   async function enviar() {
     if (!form.nome || !form.contato) { setErro('Preencha seu nome e um contato (WhatsApp ou e-mail).'); return }
     setSalvando(true); setErro('')
+    const prog = programaTexto()
+    const obsFinal = [prog && 'Programa: ' + prog, form.obs && 'Obs: ' + form.obs].filter(Boolean).join(' · ')
     try {
-      await salvarLeadProjeto({ ...form, tipo, padrao: sel?.padrao || padraoTipo, telhado: sel?.telhado || '', modelo: sel ? sel.nome : '' })
+      await salvarLeadProjeto({ ...form, obs: obsFinal, tipo, padrao: sel?.padrao || padraoTipo, telhado: sel?.telhado || '', modelo: sel ? sel.nome : '' })
       setEnviado(true)
     } catch (e) { setErro('Não deu pra enviar agora. Tente de novo ou fale com a gente no WhatsApp.') }
     setSalvando(false)
@@ -128,8 +146,40 @@ export default function MonteSuaCasa() {
           })}
         </div>
 
-        {/* formulário */}
+        {/* programa da casa — o que o cliente quer ter */}
         <div className="card" style={{ padding: 20, marginTop: 24 }}>
+          <div className="sec-title" style={{ marginTop: 0 }}>O que a sua casa vai ter?</div>
+          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 14px' }}>Monte o programa da sua casa. Some os cômodos que você quer, é o ponto de partida pro projeto.</div>
+          <div className="field" style={{ maxWidth: 220, marginBottom: 14 }}>
+            <label>Área desejada (m²) · opcional</label>
+            <input style={inp} type="number" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Ex.: 180" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 10 }}>
+            {COMODOS.map((c) => (
+              <div key={c} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 12px' }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{c}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button type="button" onClick={() => setComodo(c, (Number(comodos[c]) || 0) - 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>−</button>
+                  <b style={{ minWidth: 14, textAlign: 'center', fontFamily: 'monospace' }}>{Number(comodos[c]) || 0}</b>
+                  <button type="button" onClick={() => setComodo(c, (Number(comodos[c]) || 0) + 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>+</button>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', marginTop: 14 }}>
+            {EXTRAS.map((e) => {
+              const on = !!extras[e]
+              return (
+                <button key={e} type="button" onClick={() => setExtras({ ...extras, [e]: !on })} style={{ border: '1px solid var(--line)', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--ink2,#555)' }}>
+                  {on ? '✓ ' : '+ '}{e}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* formulário */}
+        <div className="card" style={{ padding: 20, marginTop: 16 }}>
           <div className="sec-title" style={{ marginTop: 0 }}>
             {sel ? <>Gostou do <b style={{ color: 'var(--accent)' }}>{sel.nome}</b>? Deixe seu contato</> : 'Deixe seu contato e a gente começa'}
           </div>
