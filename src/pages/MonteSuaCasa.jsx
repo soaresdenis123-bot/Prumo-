@@ -5,7 +5,7 @@ import PlumbMark from '../components/PlumbMark'
 
 // Access Key gratuita do web3forms.com — cole aqui para receber cada lead por e-mail
 // (o e-mail de destino, adm@msconstrucoesinteligentes.com.br, é configurado na conta web3forms).
-const EMAIL_KEY = ''
+const EMAIL_KEY = '7deb7e3c-19dd-4aeb-a043-12d7bfca6b17'
 // telhado só de platibanda: cobertura escondida, apenas fibrocimento ou metálica
 const TELHADO_PLATIBANDA = ['Fibrocimento', 'Telha metálica (galvalume)']
 // paisagismo (do projeto Ana Carvalho — jardim tropical contemporâneo, sem preços)
