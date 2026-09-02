@@ -16,7 +16,7 @@ import Time from './pages/Time'
 import Portal from './pages/Portal'
 import PublicObra from './pages/PublicObra'
 import MonteSuaCasa from './pages/MonteSuaCasa'
-import Leads from './pages/Leads'
+import Clientes from './pages/Clientes'
 
 function Spinner() {
   return <div className="spin" />
@@ -40,7 +40,8 @@ function AppGated() {
         <Route path="/obra/:id" element={<ObraDetail />} />
         {isStaff && <Route path="/nova" element={<NovaObra />} />}
         {isStaff && <Route path="/orcamento" element={<Orcamento />} />}
-        {isStaff && <Route path="/leads" element={<Leads />} />}
+        {isStaff && <Route path="/clientes" element={<Clientes />} />}
+        {isStaff && <Route path="/leads" element={<Navigate to="/clientes" replace />} />}
         {isStaff && <Route path="/calculadora" element={<Navigate to="/orcamento" replace />} />}
         {isStaff && <Route path="/orcamentos" element={<Navigate to="/orcamento" replace />} />}
         {isStaff && <Route path="/fornecedores" element={<Fornecedores />} />}

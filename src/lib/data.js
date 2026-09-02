@@ -467,6 +467,19 @@ export async function listLeadsProjeto() {
   if (error) throw error
   return data || []
 }
+export async function updateLead(id, campos) {
+  const { error } = await supabase.from('leads_projeto').update(campos).eq('id', id)
+  if (error) throw error
+}
+export async function deleteLead(id) {
+  const { error } = await supabase.from('leads_projeto').delete().eq('id', id)
+  if (error) throw error
+}
+// contagem de leads novos (para o aviso no menu)
+export async function contarLeadsNovos() {
+  const { count } = await supabase.from('leads_projeto').select('id', { count: 'exact', head: true }).eq('cliente', false).eq('status', 'novo')
+  return count || 0
+}
 
 // ---- link público do cliente (sem login) ----
 export async function getObraPublica(token) {

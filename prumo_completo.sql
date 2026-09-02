@@ -1092,3 +1092,11 @@ begin
   return v_id;
 end $$;
 grant execute on function public.salvar_lead_projeto(json) to anon, authenticated;
+
+-- =====================================================================
+--  v14 — Clientes/Leads: coluna "cliente" + permissão de excluir
+-- =====================================================================
+alter table public.leads_projeto add column if not exists cliente boolean not null default false;
+drop policy if exists "leads: equipe exclui" on public.leads_projeto;
+create policy "leads: equipe exclui" on public.leads_projeto for delete using ( public.eh_equipe() );
+grant delete on public.leads_projeto to authenticated;

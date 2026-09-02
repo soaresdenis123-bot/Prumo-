@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { contarLeadsNovos } from '../lib/data'
 import PlumbMark from './PlumbMark'
 
 const IconPanel = () => (
@@ -30,6 +32,8 @@ const IconTeam = () => (
 export default function Layout({ children }) {
   const { profile, signOut, isStaff } = useAuth()
   const papelLabel = profile.papel === 'admin' ? 'Administrador' : profile.papel === 'gestor' ? 'Gestor de obra' : 'Execução de obra'
+  const [novos, setNovos] = useState(0)
+  useEffect(() => { if (isStaff) contarLeadsNovos().then(setNovos).catch(() => {}) }, [isStaff])
   return (
     <div className="app">
       <aside className="side">
@@ -45,7 +49,7 @@ export default function Layout({ children }) {
           <NavLink to="/" end><IconPanel />Painel</NavLink>
           <NavLink to="/obras"><IconObras />Obras</NavLink>
           {isStaff && <NavLink to="/orcamento"><IconCalc />Orçamento</NavLink>}
-          {isStaff && <NavLink to="/leads"><IconLead />Leads</NavLink>}
+          {isStaff && <NavLink to="/clientes"><IconLead />Clientes{novos > 0 && <span style={{ marginLeft: 'auto', background: 'var(--accent)', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{novos}</span>}</NavLink>}
           {isStaff && <div className="lbl">Interno</div>}
           {isStaff && <NavLink to="/financeiro"><IconFin />Financeiro</NavLink>}
           {isStaff && <NavLink to="/fornecedores"><IconTruck />Fornecedores</NavLink>}

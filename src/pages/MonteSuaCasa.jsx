@@ -1,7 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { salvarLeadProjeto } from '../lib/data'
 import { MODELOS } from '../lib/modelos'
 import PlumbMark from '../components/PlumbMark'
+
+// Access Key gratuita do web3forms.com — cole aqui para receber cada lead por e-mail
+// (o e-mail de destino, adm@msconstrucoesinteligentes.com.br, é configurado na conta web3forms).
+const EMAIL_KEY = ''
+// telhado só de platibanda: cobertura escondida, apenas fibrocimento ou metálica
+const TELHADO_PLATIBANDA = ['Fibrocimento', 'Telha metálica (galvalume)']
+// paisagismo (do projeto Ana Carvalho — jardim tropical contemporâneo, sem preços)
+const OPT_PAIS = [
+  'Jardim de entrada · até 9 m² (destaque com palmeira, forrações e iluminação)',
+  'Paisagismo completo · até 18 m² (jardim tropical contemporâneo, canteiros, pedras e iluminação)',
+]
 
 /* =========================================================================
  *  MONTE SUA CASA — página pública de captação (sem login, sem custos)
@@ -38,7 +49,7 @@ export default function MonteSuaCasa() {
   const [area, setArea] = useState('')
   const [comodos, setComodos] = useState({})
   const [extras, setExtras] = useState({})
-  const [acab, setAcab] = useState({ piso: '', telhado: '', esquadrias: '' })
+  const [acab, setAcab] = useState({ piso: '', telhado: '', esquadrias: '', paisagismo: '' })
   const [form, setForm] = useState({ nome: '', contato: '', cidade: '', obs: '' })
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState('')
@@ -51,6 +62,14 @@ export default function MonteSuaCasa() {
   const padraoTipo = tipo === 'sobrado' ? 'alto padrão' : 'médio padrão'
   const setComodo = (c, v) => setComodos({ ...comodos, [c]: Math.max(0, v) })
 
+  // platibanda = cobertura escondida → só fibrocimento ou metálica
+  const platibanda = sel ? sel.telhado === 'platibanda' : telhado === 'platibanda'
+  const optTelhado = platibanda ? { medio: TELHADO_PLATIBANDA, alto: [] } : OPT_TELHADO
+  // se virar platibanda e a cobertura escolhida não for permitida, limpa
+  useEffect(() => {
+    if (platibanda && acab.telhado && !TELHADO_PLATIBANDA.includes(acab.telhado)) setAcab((a) => ({ ...a, telhado: '' }))
+  }, [platibanda]) // eslint-disable-line
+
   // monta o texto do programa da casa (cômodos + extras) pra salvar no lead
   function programaTexto() {
     const partes = []
@@ -61,7 +80,20 @@ export default function MonteSuaCasa() {
     if (acab.piso) partes.push('Piso: ' + acab.piso)
     if (acab.telhado) partes.push('Telhado: ' + acab.telhado)
     if (acab.esquadrias) partes.push('Esquadrias: ' + acab.esquadrias)
+    if (acab.paisagismo) partes.push('Paisagismo: ' + acab.paisagismo)
     return partes.join(' · ')
+  }
+
+  // avisa por e-mail (opcional; ativa quando EMAIL_KEY estiver preenchido)
+  async function notificarEmail(lead) {
+    if (!EMAIL_KEY) return
+    try {
+      await fetch('https://api.web3forms.com/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ access_key: EMAIL_KEY, subject: 'Novo lead — Monte sua casa', from_name: 'Site MS',
+          Nome: lead.nome, Contato: lead.contato, Cidade: lead.cidade, Modelo: lead.modelo, Detalhes: lead.obs }),
+      })
+    } catch (e) { /* não bloqueia o envio */ }
   }
 
   async function enviar() {
@@ -69,8 +101,10 @@ export default function MonteSuaCasa() {
     setSalvando(true); setErro('')
     const prog = programaTexto()
     const obsFinal = [prog && 'Programa: ' + prog, form.obs && 'Obs: ' + form.obs].filter(Boolean).join(' · ')
+    const payload = { ...form, obs: obsFinal, tipo, padrao: sel?.padrao || padraoTipo, telhado: sel?.telhado || '', modelo: sel ? sel.nome : '' }
     try {
-      await salvarLeadProjeto({ ...form, obs: obsFinal, tipo, padrao: sel?.padrao || padraoTipo, telhado: sel?.telhado || '', modelo: sel ? sel.nome : '' })
+      await salvarLeadProjeto(payload)
+      notificarEmail(payload)
       setEnviado(true)
     } catch (e) { setErro('Não deu pra enviar agora. Tente de novo ou fale com a gente no WhatsApp.') }
     setSalvando(false)
@@ -178,16 +212,27 @@ export default function MonteSuaCasa() {
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Acabamentos principais</div>
             <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Escolha o padrão de piso, cobertura e esquadrias. Pode misturar médio e alto, do seu jeito.</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
-              {ACAB.map(([k, label, opts]) => (
-                <div className="field" key={k}>
-                  <label>{label}</label>
-                  <select style={inp} value={acab[k]} onChange={(e) => setAcab({ ...acab, [k]: e.target.value })}>
-                    <option value="">Selecione…</option>
-                    <optgroup label="Médio padrão">{opts.medio.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>
-                    <optgroup label="Alto padrão">{opts.alto.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>
-                  </select>
-                </div>
-              ))}
+              {ACAB.map(([k, label, baseOpts]) => {
+                const opts = k === 'telhado' ? optTelhado : baseOpts
+                return (
+                  <div className="field" key={k}>
+                    <label>{label}</label>
+                    <select style={inp} value={acab[k]} onChange={(e) => setAcab({ ...acab, [k]: e.target.value })}>
+                      <option value="">Selecione…</option>
+                      {opts.medio.length > 0 && <optgroup label={k === 'telhado' && platibanda ? 'Para platibanda' : 'Médio padrão'}>{opts.medio.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>}
+                      {opts.alto.length > 0 && <optgroup label="Alto padrão">{opts.alto.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>}
+                    </select>
+                    {k === 'telhado' && platibanda && <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Platibanda esconde o telhado: cobertura em fibrocimento ou metálica.</div>}
+                  </div>
+                )
+              })}
+              <div className="field">
+                <label>Paisagismo <span className="muted" style={{ fontWeight: 400 }}>· opcional</span></label>
+                <select style={inp} value={acab.paisagismo} onChange={(e) => setAcab({ ...acab, paisagismo: e.target.value })}>
+                  <option value="">Sem paisagismo por enquanto</option>
+                  {OPT_PAIS.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
             </div>
           </div>
         </div>
