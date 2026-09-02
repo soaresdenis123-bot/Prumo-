@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { salvarLeadProjeto } from '../lib/data'
 import { MODELOS } from '../lib/modelos'
+import { estimativa, brl } from '../lib/precificacao'
 import PlumbMark from '../components/PlumbMark'
 
 // Access Key gratuita do web3forms.com — cole aqui para receber cada lead por e-mail
@@ -62,6 +63,13 @@ export default function MonteSuaCasa() {
   const padraoTipo = tipo === 'sobrado' ? 'alto padrão' : 'médio padrão'
   const setComodo = (c, v) => setComodos({ ...comodos, [c]: Math.max(0, v) })
 
+  // estimativa de investimento (faixa) — área informada ou área média do tipo
+  const est = useMemo(() => {
+    const padrao = (sel?.padrao === 'alto' || sel?.padrao === 'medio') ? sel.padrao : (tipo === 'sobrado' ? 'alto' : 'medio')
+    const areaEst = Number(area) || (tipo === 'sobrado' ? 180 : 120)
+    return estimativa(areaEst, padrao, !!acab.paisagismo)
+  }, [sel, tipo, area, acab.paisagismo])
+
   // platibanda = cobertura escondida → só fibrocimento ou metálica
   const platibanda = sel ? sel.telhado === 'platibanda' : telhado === 'platibanda'
   const optTelhado = platibanda ? { medio: TELHADO_PLATIBANDA, alto: [] } : OPT_TELHADO
@@ -100,7 +108,8 @@ export default function MonteSuaCasa() {
     if (!form.nome || !form.contato) { setErro('Preencha seu nome e um contato (WhatsApp ou e-mail).'); return }
     setSalvando(true); setErro('')
     const prog = programaTexto()
-    const obsFinal = [prog && 'Programa: ' + prog, form.obs && 'Obs: ' + form.obs].filter(Boolean).join(' · ')
+    const estTxt = `Estimativa: De ${brl(est.min)} a ${brl(est.max)} (a depender dos materiais de acabamentos e revestimentos)`
+    const obsFinal = [prog && 'Programa: ' + prog, estTxt, form.obs && 'Obs: ' + form.obs].filter(Boolean).join(' · ')
     const payload = { ...form, obs: obsFinal, tipo, padrao: sel?.padrao || padraoTipo, telhado: sel?.telhado || '', modelo: sel ? sel.nome : '' }
     try {
       await salvarLeadProjeto(payload)
@@ -234,6 +243,17 @@ export default function MonteSuaCasa() {
                 </select>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* estimativa de investimento (faixa) — objetivo, sem detalhamento */}
+        <div className="card" style={{ padding: 20, marginTop: 16, background: 'var(--ink)', color: 'var(--bg,#fff)', border: 'none' }}>
+          <div style={{ fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase', opacity: .7, fontWeight: 700 }}>Estimativa de investimento</div>
+          <div style={{ fontSize: 'clamp(24px,5vw,34px)', fontWeight: 800, letterSpacing: '-.5px', marginTop: 6 }}>
+            De {brl(est.min)} <span style={{ opacity: .55, fontWeight: 500 }}>a</span> {brl(est.max)}
+          </div>
+          <div style={{ fontSize: 12.5, opacity: .78, marginTop: 8, maxWidth: 560 }}>
+            Faixa estimada para {est.area} m² em steel frame, chave na mão. O valor final depende dos materiais de acabamentos e revestimentos que você escolher — fechamos tudo na reunião de diagnóstico.
           </div>
         </div>
 

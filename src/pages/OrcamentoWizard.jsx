@@ -1,5 +1,6 @@
 import { useState, useEffect, Fragment } from 'react'
 import { BRL, saveOrcamento, listProdutosComFornecedor, listObras } from '../lib/data'
+import { SERVICOS } from '../lib/precificacao'
 import PlumbMark from '../components/PlumbMark'
 
 /* =========================================================================
@@ -100,6 +101,16 @@ function gerarProjeto(cfg) {
   return { nome: 'Projeto & Obra', itens: P.map((it) => ({ ...it, qtd: Math.max(1, Math.round(it.coef)) })) }
 }
 
+// Projetos & serviços de contratação — valores REAIS por m² (documento MS).
+// Entram no detalhado interno; o Book de entrega (R$0) fica de fora.
+function gerarServicos(cfg) {
+  const A = Number(cfg.area) || 0
+  const itens = SERVICOS.filter((s) => s.m2 > 0 && !s.opcional).map((s) =>
+    ({ ...AU(s.nome, 'm²', A, s.m2, '', true, 'Entrega'), qtd: Math.max(1, A) })
+  )
+  return { nome: 'Projetos & Serviços', itens }
+}
+
 function gerarAmbientes(cfg) {
   const grupos = []
   COMODOS.forEach((tipo) => {
@@ -159,7 +170,7 @@ export default function OrcamentoWizard({ prefill }) {
     setEtapa('config')
   }
   function avancar() {
-    setGrupos([gerarProjeto(cfg), ...gerarAmbientes(cfg)])
+    setGrupos([gerarServicos(cfg), gerarProjeto(cfg), ...gerarAmbientes(cfg)])
     setEtapa('detalhado')
   }
   const setComodo = (t, v) => setCfg({ ...cfg, comodos: { ...cfg.comodos, [t]: Math.max(0, v) } })
@@ -251,7 +262,7 @@ export default function OrcamentoWizard({ prefill }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <button className="muted" style={{ fontSize: 12.5 }} onClick={() => setEtapa('config')}>← Ajustar cômodos</button>
-        <span className="pill" style={{ background: 'var(--surface2)', color: 'var(--accent2)' }}>{cfg.tipo === 'sobrado' ? 'Sobrado' : 'Térrea'} · {cfg.area} m² · {grupos.length - 1} ambientes</span>
+        <span className="pill" style={{ background: 'var(--surface2)', color: 'var(--accent2)' }}>{cfg.tipo === 'sobrado' ? 'Sobrado' : 'Térrea'} · {cfg.area} m² · {Math.max(0, grupos.length - 2)} ambientes</span>
         <span className="muted" style={{ fontSize: 12 }}>Cada material tem 3 níveis (popular / médio / alto). Ajuste quantidade, valor ou puxe do fornecedor.</span>
       </div>
 
