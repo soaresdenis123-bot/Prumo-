@@ -63,12 +63,11 @@ export default function MonteSuaCasa() {
   const padraoTipo = tipo === 'sobrado' ? 'alto padrão' : 'médio padrão'
   const setComodo = (c, v) => setComodos({ ...comodos, [c]: Math.max(0, v) })
 
-  // estimativa de investimento (faixa) — área informada ou área média do tipo
+  // estimativa de investimento (faixa) — escala com área, cômodos, extras e paisagismo
   const est = useMemo(() => {
     const padrao = (sel?.padrao === 'alto' || sel?.padrao === 'medio') ? sel.padrao : (tipo === 'sobrado' ? 'alto' : 'medio')
-    const areaEst = Number(area) || (tipo === 'sobrado' ? 180 : 120)
-    return estimativa(areaEst, padrao, !!acab.paisagismo)
-  }, [sel, tipo, area, acab.paisagismo])
+    return estimativa({ area, tipo, padrao, comodos, extras, paisagismo: acab.paisagismo })
+  }, [sel, tipo, area, comodos, extras, acab.paisagismo])
 
   // platibanda = cobertura escondida → só fibrocimento ou metálica
   const platibanda = sel ? sel.telhado === 'platibanda' : telhado === 'platibanda'
@@ -81,7 +80,7 @@ export default function MonteSuaCasa() {
   // monta o texto do programa da casa (cômodos + extras) pra salvar no lead
   function programaTexto() {
     const partes = []
-    if (area) partes.push(`~${area} m²`)
+    partes.push(`~${est.area} m²`) // sempre grava a área efetiva (informada ou estimada pelos cômodos)
     COMODOS.forEach((c) => { const n = Number(comodos[c]) || 0; if (n > 0) partes.push(`${n} ${c.toLowerCase()}`) })
     const ex = EXTRAS.filter((e) => extras[e])
     if (ex.length) partes.push('extras: ' + ex.join(', ').toLowerCase())

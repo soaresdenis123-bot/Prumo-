@@ -1,6 +1,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { BRL, saveOrcamento, listProdutosComFornecedor, listObras } from '../lib/data'
-import { SERVICOS } from '../lib/precificacao'
+import { SERVICOS, areaDosComodos } from '../lib/precificacao'
+import { MO_PCT_PADRAO, MO_MIN, MO_MAX, MARGEM_PCT_PADRAO, custoInstalado, precoVenda, margemDe } from '../lib/custos'
 import PlumbMark from '../components/PlumbMark'
 
 /* =========================================================================
@@ -57,6 +58,7 @@ const FEATURES = [
   { key: 'piscina', nome: 'Piscina', it: () => CH('Piscina', 'vb', 1, [T('Fibra', 25000), T('Vinil', 38000), T('Alvenaria / azulejo', 60000)], '', true, 'Externo') },
   { key: 'lareira', nome: 'Lareira', it: () => CH('Lareira', 'vb', 1, [T('Pré-moldada', 3500), T('Ecológica', 5500), T('Revestida', 9000)], '', true, 'Externo') },
   { key: 'gourmet', nome: 'Área gourmet / churrasqueira', it: () => CH('Área gourmet', 'vb', 1, [T('Simples', 4000), T('Média', 8000), T('Completa', 15000)], '', true, 'Externo') },
+  { key: 'paisagismo', nome: 'Paisagismo', it: () => CH('Paisagismo (projeto + execução)', 'vb', 1, [T('Jardim de entrada', 6000), T('Paisagismo completo', 15000)], '', true, 'Jardinagem') },
 ]
 const TELHADOS = [['Fibrocimento', 0], ['Cerâmico', 1], ['Shingle', 2], ['Metálico sanduíche', 2], ['Laje impermeabilizada', 1]]
 
@@ -96,7 +98,12 @@ function gerarProjeto(cfg) {
   P.push(CH('Fachada / pintura externa', 'm²', Math.round(footprint * (sobrado ? 2.4 : 1.6)), [T('Textura', 30), T('Premium', 45), T('Grafiato', 60)], 'Externo', false, 'Fachada'))
   P.push(AU('Impermeabilização', 'm²', footprint, 35, '', true, 'Fundação'))
   P.push(AU('Limpeza final / entrega', 'vb', 1, 1500, '', true, 'Entrega'))
-  FEATURES.forEach((f) => { if (cfg.features[f.key]) P.push(f.it()) })
+  FEATURES.forEach((f) => {
+    if (!cfg.features[f.key]) return
+    const item = f.it()
+    if (f.key === 'paisagismo') item.sel = cfg.paisEscopo === 'completo' ? 1 : 0
+    P.push(item)
+  })
   // coef já é a quantidade absoluta de cada item da obra
   return { nome: 'Projeto & Obra', itens: P.map((it) => ({ ...it, qtd: Math.max(1, Math.round(it.coef)) })) }
 }
@@ -134,6 +141,7 @@ export default function OrcamentoWizard({ prefill }) {
   const [picker, setPicker] = useState(null) // {gi, ii}
   const [showPrint, setShowPrint] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
+  const [margemPct, setMargemPct] = useState(Math.round(MARGEM_PCT_PADRAO * 100)) // % de margem sobre o custo
   const [numero] = useState(() => 'MS-' + new Date().getFullYear() + '-' + String(Math.floor(100 + Math.random() * 899)))
 
   useEffect(() => { listObras().then(setObras).catch(() => {}) }, [])
@@ -144,13 +152,15 @@ export default function OrcamentoWizard({ prefill }) {
     const obs = (prefill.obs || '').toLowerCase()
     const tipo = prefill.tipo === 'sobrado' ? 'sobrado' : 'terrea'
     const areaM = obs.match(/(\d+)\s*m²/)
-    const area = areaM ? Number(areaM[1]) : (tipo === 'sobrado' ? 180 : 120)
     const MAP = { 'quartos': 'Quarto', 'suítes': 'Suíte', 'banheiros': 'Banheiro', 'lavabo': 'Lavabo', 'cozinha': 'Cozinha', 'sala de estar': 'Sala de estar', 'sala de jantar': 'Sala de jantar', 'garagem (vagas)': 'Garagem', 'área de serviço': 'Área de serviço', 'escritório': 'Escritório', 'varanda': 'Varanda' }
     const comodos = {}
     Object.entries(MAP).forEach(([lbl, key]) => {
       const m = obs.match(new RegExp('(\\d+)\\s+' + lbl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
       if (m) comodos[key] = Math.max(comodos[key] || 0, Number(m[1]))
     })
+    // área: usa o m² informado; se faltar, estima pela soma dos cômodos (nunca dobra)
+    const areaCom = Object.entries(comodos).reduce((t, [k, n]) => t + (AMBS[k]?.area || 8) * (Number(n) || 0), 0)
+    const area = areaM ? Number(areaM[1]) : (areaCom ? Math.round(areaCom * 1.15) : (tipo === 'sobrado' ? 150 : 100))
     const def = tipo === 'sobrado'
       ? { Quarto: 2, Suíte: 1, Banheiro: 2, Lavabo: 1, Cozinha: 1, 'Sala de estar': 1, 'Sala de jantar': 1, Garagem: 1, 'Área de serviço': 1, Varanda: 1 }
       : { Quarto: 2, Suíte: 1, Banheiro: 1, Lavabo: 1, Cozinha: 1, 'Sala de estar': 1, Garagem: 1, 'Área de serviço': 1 }
@@ -162,9 +172,12 @@ export default function OrcamentoWizard({ prefill }) {
     const raw = prefill.obs || ''
     const grab = (lbl) => { const m = raw.match(new RegExp(lbl + ':\\s*([^·]+)')); return m ? m[1].trim() : '' }
     const acabCliente = { piso: grab('Piso'), telhado: grab('Telhado'), esquadrias: grab('Esquadrias'), paisagismo: grab('Paisagismo') }
+    // paisagismo escolhido pelo cliente entra como item da obra
+    if (acabCliente.paisagismo) features.paisagismo = true
+    const paisEscopo = /completo|18/.test(acabCliente.paisagismo.toLowerCase()) ? 'completo' : 'entrada'
     // padrão do cliente vira o nível padrão do detalhado (0 popular · 1 médio · 2 alto)
     const tierGlobal = String(prefill.padrao || '').toLowerCase().includes('alto') ? 2 : 1
-    setCfg((c) => ({ ...c, tipo, area, comodos: Object.keys(comodos).length ? comodos : def, features, acabCliente, tierGlobal }))
+    setCfg((c) => ({ ...c, tipo, area, comodos: Object.keys(comodos).length ? comodos : def, features, acabCliente, tierGlobal, paisEscopo }))
     setMeta((m) => ({ ...m, cliente: prefill.nome || '', cidade: prefill.cidade || '', obra: prefill.modelo ? 'Casa ' + prefill.modelo : '', lead_id: prefill.id }))
     setEtapa('config')
   }, [prefill])
@@ -184,20 +197,25 @@ export default function OrcamentoWizard({ prefill }) {
 
   // edição no detalhado
   const upd = (gi, ii, fn) => setGrupos(grupos.map((g, x) => x !== gi ? g : { ...g, itens: g.itens.map((it, y) => y !== ii ? it : fn(it)) }))
-  const setTier = (gi, ii, s) => upd(gi, ii, (it) => ({ ...it, sel: s }))
+  const setTier = (gi, ii, s) => upd(gi, ii, (it) => ({ ...it, sel: s, vendaOv: undefined }))
   const setCampo = (gi, ii, k, v) => upd(gi, ii, (it) => ({ ...it, [k]: v }))
   const delItem = (gi, ii) => setGrupos(grupos.map((g, x) => x !== gi ? g : { ...g, itens: g.itens.filter((_, y) => y !== ii) }))
   const addItem = (gi) => setGrupos(grupos.map((g, x) => x !== gi ? g : { ...g, itens: [...g.itens, AU('Novo item', 'un', 1, 0, '', true, 'Outros')] }))
   function puxarForn(gi, ii, p) { upd(gi, ii, (it) => ({ ...it, k: 'au', desc: p.produto, un: p.unidade || it.un, preco: Number(p.valor) || 0, forn: p.fornecedor })); setPicker(null) }
 
-  const subtotal = (g) => g.itens.reduce((t, it) => t + (Number(it.qtd) || 0) * valorDe(it), 0)
+  // compra = custo (material + execução já embutida) · venda = custo + margem (editável)
+  const compraUn = (it) => valorDe(it)
+  const vendaUn = (it) => (it.vendaOv != null && it.vendaOv !== '') ? Number(it.vendaOv) : precoVenda(valorDe(it), 0, margemPct / 100)
+  const subtotal = (g) => g.itens.reduce((t, it) => t + (Number(it.qtd) || 0) * vendaUn(it), 0)
+  const custoSubtotal = (g) => g.itens.reduce((t, it) => t + (Number(it.qtd) || 0) * compraUn(it), 0)
   const total = grupos.reduce((t, g) => t + subtotal(g), 0)
+  const custoTotal = grupos.reduce((t, g) => t + custoSubtotal(g), 0)
 
   function flatten() {
     const rows = []
     grupos.forEach((g) => g.itens.forEach((it) => {
-      const v = valorDe(it), q = Number(it.qtd) || 0
-      if (q * v > 0) rows.push({ categoria: g.nome, grupo: catDe(it), item: it.desc + (it.k === 'ch' ? ' · ' + it.tiers[it.sel].n : ''), qtd: q, un: it.un, valor: v, local: it.local })
+      const v = vendaUn(it), q = Number(it.qtd) || 0
+      if (q * v > 0) rows.push({ categoria: g.nome, grupo: catDe(it), item: it.desc + (it.k === 'ch' ? ' · ' + it.tiers[it.sel].n : ''), qtd: q, un: it.un, valor: v, custo: compraUn(it), local: it.local })
     }))
     return rows
   }
@@ -284,18 +302,26 @@ export default function OrcamentoWizard({ prefill }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <button className="muted" style={{ fontSize: 12.5 }} onClick={() => setEtapa('config')}>← Ajustar cômodos</button>
         <span className="pill" style={{ background: 'var(--surface2)', color: 'var(--accent2)' }}>{cfg.tipo === 'sobrado' ? 'Sobrado' : 'Térrea'} · {cfg.area} m² · {Math.max(0, grupos.length - 2)} ambientes</span>
-        <span className="muted" style={{ fontSize: 12 }}>Cada material tem 3 níveis (popular / médio / alto). Ajuste quantidade, valor ou puxe do fornecedor.</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, border: '1px solid var(--line)', borderRadius: 8, padding: '4px 10px' }}>
+          <b>Margem</b>
+          <input type="number" value={margemPct} onChange={(e) => setMargemPct(e.target.value)} style={{ width: 52, textAlign: 'right', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 6px', background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'IBM Plex Mono' }} />%
+        </span>
+        <span className="muted" style={{ fontSize: 11.5, maxWidth: 340 }}>Custo = material + execução (mão de obra já embutida). Venda = custo + margem — editável por linha.</span>
       </div>
 
       {grupos.map((g, gi) => (
         <div key={gi} className="card" style={{ padding: 0, marginBottom: 14, overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 14px', background: 'var(--surface2)', borderBottom: '1px solid var(--line)' }}>
-            <b style={{ fontSize: 14 }}>{g.nome}</b><span className="mono" style={{ fontWeight: 600 }}>{BRL(subtotal(g))}</span>
+            <b style={{ fontSize: 14 }}>{g.nome}</b>
+            <span style={{ display: 'inline-flex', gap: 12, alignItems: 'baseline' }}>
+              <span className="muted" style={{ fontSize: 11.5 }}>custo {BRL(custoSubtotal(g))}</span>
+              <span className="mono" style={{ fontWeight: 600 }}>{BRL(subtotal(g))}</span>
+            </span>
           </div>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
-              <thead><tr>{['Item', 'Opção / nível', 'Qtd', 'Un.', 'Valor un.', 'Subtotal', ''].map((h) => (
-                <th key={h} style={{ textAlign: ['Qtd', 'Valor un.', 'Subtotal'].includes(h) ? 'right' : 'left', fontSize: 10, textTransform: 'uppercase', color: 'var(--ink3)', fontWeight: 700, padding: '8px 12px', borderBottom: '1px solid var(--line2)' }}>{h}</th>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+              <thead><tr>{['Item', 'Opção / nível', 'Qtd', 'Un.', 'Custo un.', 'Venda un.', 'Subtotal', ''].map((h) => (
+                <th key={h} style={{ textAlign: ['Qtd', 'Custo un.', 'Venda un.', 'Subtotal'].includes(h) ? 'right' : 'left', fontSize: 10, textTransform: 'uppercase', color: 'var(--ink3)', fontWeight: 700, padding: '8px 12px', borderBottom: '1px solid var(--line2)' }}>{h}</th>
               ))}</tr></thead>
               <tbody>
                 {g.itens.map((it, ii) => (
@@ -310,15 +336,19 @@ export default function OrcamentoWizard({ prefill }) {
                       </td>
                       <td style={{ padding: '6px 12px', width: 56 }}><input type="number" value={it.qtd} onChange={(e) => setCampo(gi, ii, 'qtd', e.target.value)} style={{ ...cell, textAlign: 'right', fontFamily: 'IBM Plex Mono' }} /></td>
                       <td style={{ padding: '6px 12px', width: 44 }}><input value={it.un} onChange={(e) => setCampo(gi, ii, 'un', e.target.value)} style={cell} /></td>
-                      <td style={{ padding: '6px 12px', width: 96 }}>
+                      <td style={{ padding: '6px 12px', width: 90 }}>
                         {it.k === 'ch'
-                          ? <span className="mono" style={{ fontSize: 12.5 }}>{BRL(valorDe(it))}</span>
-                          : <input type="number" value={it.preco} onChange={(e) => setCampo(gi, ii, 'preco', Number(e.target.value))} style={{ ...cell, textAlign: 'right', fontFamily: 'IBM Plex Mono' }} />}
+                          ? <span className="mono" style={{ fontSize: 12.5, color: 'var(--ink2)' }}>{BRL(compraUn(it))}</span>
+                          : <input type="number" value={it.preco} onChange={(e) => setCampo(gi, ii, 'preco', Number(e.target.value))} style={{ ...cell, textAlign: 'right', fontFamily: 'IBM Plex Mono', color: 'var(--ink2)' }} />}
                       </td>
-                      <td className="mono" style={{ padding: '6px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{BRL((Number(it.qtd) || 0) * valorDe(it))}</td>
+                      <td style={{ padding: '6px 12px', width: 108 }}>
+                        <input type="number" value={Math.round(vendaUn(it))} onChange={(e) => setCampo(gi, ii, 'vendaOv', e.target.value)} style={{ ...cell, textAlign: 'right', fontFamily: 'IBM Plex Mono', fontWeight: 600 }} />
+                        <div className="muted" style={{ fontSize: 9.5, textAlign: 'right', marginTop: 1 }}>{compraUn(it) > 0 ? '+' + Math.round(margemDe(vendaUn(it), compraUn(it), 0) * 100) + '%' : '—'}</div>
+                      </td>
+                      <td className="mono" style={{ padding: '6px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>{BRL((Number(it.qtd) || 0) * vendaUn(it))}</td>
                       <td style={{ padding: '6px 8px', width: 22 }}><button className="muted" onClick={() => delItem(gi, ii)} style={{ fontSize: 14 }}>×</button></td>
                     </tr>
-                    {picker && picker.gi === gi && picker.ii === ii && <tr><td colSpan="7" style={{ padding: 0 }}><FornecedorPicker onPick={(p) => puxarForn(gi, ii, p)} onClose={() => setPicker(null)} /></td></tr>}
+                    {picker && picker.gi === gi && picker.ii === ii && <tr><td colSpan="8" style={{ padding: 0 }}><FornecedorPicker onPick={(p) => puxarForn(gi, ii, p)} onClose={() => setPicker(null)} /></td></tr>}
                   </Fragment>
                 ))}
               </tbody>
@@ -338,8 +368,21 @@ export default function OrcamentoWizard({ prefill }) {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 18, marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div><div className="muted" style={{ fontSize: 12 }}>Total do orçamento</div><div className="result-big">{BRL(total)}</div></div>
+      <div className="card" style={{ padding: 18, marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 26, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div>
+            <div className="muted" style={{ fontSize: 11 }}>Custo (interno)</div>
+            <div className="mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink2)' }}>{BRL(custoTotal)}</div>
+          </div>
+          <div>
+            <div className="muted" style={{ fontSize: 12 }}>Venda ao cliente</div>
+            <div className="result-big">{BRL(total)}</div>
+          </div>
+          <div>
+            <div className="muted" style={{ fontSize: 11 }}>Margem</div>
+            <div className="mono" style={{ fontSize: 15, fontWeight: 700, color: 'var(--ok)' }}>{BRL(total - custoTotal)} <span style={{ fontSize: 12 }}>({custoTotal > 0 ? Math.round((total / custoTotal - 1) * 100) : 0}%)</span></div>
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {saveMsg && <span style={{ fontSize: 12.5, color: 'var(--ok)' }}>{saveMsg}</span>}
           <button className="btn ghost" onClick={salvar}>Salvar no sistema</button>

@@ -1,11 +1,12 @@
 // =========================================================================
-//  PRECIFICAÇÃO — base interna da estimativa
-//  Serviços/projetos: valores REAIS por m² (do documento de contratação).
-//  Obra (material + execução): faixa por m², PLACEHOLDER — ajuste com os
-//  seus custos reais antes de divulgar. O cliente vê só a faixa final.
+//  PRECIFICAÇÃO — fachada da estimativa (usa o motor de custos custos.js)
+//  Serviços/projetos: valores REAIS por m² (documento de contratação).
+//  Obra: puxada do motor (OBRA_VENDA_M2), que você troca com seus custos.
+//  A estimativa do cliente escala com área, cômodos, extras e paisagismo.
 // =========================================================================
+import { OBRA_VENDA_M2, EXTRAS_VENDA, PAISAGISMO_VENDA, AREA_COMODO } from './custos'
 
-// Serviços inclusos na contratação (R$/m²) — valores fixos e conhecidos.
+// Projetos & serviços inclusos na contratação (R$/m²) — valores fixos.
 export const SERVICOS = [
   { nome: 'Projeto de arquitetura', m2: 100, desc: 'Entrevista, projeto 3D, arquitetônico, hidrossanitário, elétrico e aprovações (cliente/condomínio e prefeitura).' },
   { nome: 'Projeto estrutural steel frame', m2: 45, desc: 'Planta de perfis e fixação, manual técnico e lista de materiais.' },
@@ -15,26 +16,55 @@ export const SERVICOS = [
   { nome: 'Book de entrega de obra', m2: 0, desc: 'Projetos aprovados + ART, manual de uso e manutenção, notas fiscais e certificados de garantia dos materiais.' },
 ]
 
-// >>> AJUSTE: faixa de investimento da OBRA (material + execução), em R$/m².
-//     É o que varia com acabamentos e revestimentos. Estes números são um
-//     ponto de partida — troque pelos seus reais quando tiver os portfólios.
-export const OBRA_M2 = {
-  medio: [2600, 3900],
-  alto: [3900, 6200],
-}
-
 export const servicosM2 = (comPaisagismo) =>
   SERVICOS.filter((s) => !s.opcional || comPaisagismo).reduce((t, s) => t + s.m2, 0)
 
-// Estimativa final (faixa): serviços (fixo) + obra (faixa) × área.
-export function estimativa(area, padrao, comPaisagismo = false) {
-  const a = Number(area) || 0
-  const serv = servicosM2(comPaisagismo)
-  const [omin, omax] = OBRA_M2[padrao === 'alto' ? 'alto' : 'medio']
-  const round = (n) => Math.round(n / 1000) * 1000 // arredonda pro milhar
+// estima a área a partir dos cômodos (quando o cliente não informa m²)
+export function areaDosComodos(comodos = {}) {
+  let a = 0
+  Object.entries(comodos).forEach(([c, n]) => {
+    const q = Number(n) || 0
+    const chave = c.toLowerCase()
+    a += q * (AREA_COMODO[chave] || 8)
+  })
+  return a ? Math.round(a * 1.15) : 0 // +15% de circulação/paredes
+}
+
+const escopoPaisagismo = (txt) => {
+  if (!txt) return null
+  return /completo|18/.test(txt.toLowerCase()) ? 'completo' : 'entrada'
+}
+
+// -------------------------------------------------------------------------
+//  ESTIMATIVA (faixa de venda, chave na mão). Aceita um objeto de programa;
+//  também aceita a chamada antiga estimativa(area, padrao, comPaisagismo).
+// -------------------------------------------------------------------------
+export function estimativa(programa, padraoLegado, comPaisLegado) {
+  const p = (typeof programa === 'object' && programa !== null)
+    ? programa
+    : { area: programa, padrao: padraoLegado, paisagismo: comPaisLegado ? 'completo' : '' }
+
+  const padrao = String(p.padrao || '').toLowerCase().includes('alto') ? 'alto' : 'medio'
+  const areaInformada = Number(p.area) || 0
+  const areaCom = areaDosComodos(p.comodos)
+  const area = areaInformada || areaCom || (p.tipo === 'sobrado' ? 150 : 100)
+
+  const pais = escopoPaisagismo(p.paisagismo)
+  const serv = area * servicosM2(!!pais)
+  const obra = area * (OBRA_VENDA_M2[padrao] || OBRA_VENDA_M2.medio)
+
+  let extrasV = 0
+  const ex = p.extras || {}
+  if (ex.piscina || ex.Piscina) extrasV += EXTRAS_VENDA.piscina
+  if (ex.gourmet || ex['Área gourmet / churrasqueira']) extrasV += EXTRAS_VENDA.gourmet
+  if (ex.lareira || ex.Lareira) extrasV += EXTRAS_VENDA.lareira
+  const paisV = pais ? (PAISAGISMO_VENDA[pais] || 0) : 0
+
+  const base = obra + serv + extrasV + paisV
+  const round = (n) => Math.round(n / 1000) * 1000
   return {
-    area: a, servM2: serv, obraMin: omin, obraMax: omax,
-    min: round(a * (serv + omin)), max: round(a * (serv + omax)),
+    area, padrao, servM2: servicosM2(!!pais),
+    min: round(base * 0.92), max: round(base * 1.12),
   }
 }
 
