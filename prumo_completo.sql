@@ -1100,3 +1100,8 @@ alter table public.leads_projeto add column if not exists cliente boolean not nu
 drop policy if exists "leads: equipe exclui" on public.leads_projeto;
 create policy "leads: equipe exclui" on public.leads_projeto for delete using ( public.eh_equipe() );
 grant delete on public.leads_projeto to authenticated;
+
+-- =====================================================================
+--  v15 — orçamento ligado ao lead
+-- =====================================================================
+alter table public.orcamentos add column if not exists lead_id uuid references public.leads_projeto(id) on delete set null;

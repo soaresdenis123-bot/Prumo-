@@ -113,11 +113,11 @@ function gerarAmbientes(cfg) {
   return grupos
 }
 
-export default function OrcamentoWizard() {
+export default function OrcamentoWizard({ prefill }) {
   const [etapa, setEtapa] = useState('tipo')
   const [cfg, setCfg] = useState({ tipo: 'terrea', area: 120, comodos: {}, features: {}, telhado: 'Cerâmico', telhadoTier: 1 })
   const [grupos, setGrupos] = useState([])
-  const [meta, setMeta] = useState({ cliente: '', obra: '', cidade: '', validade: 15, obra_id: '' })
+  const [meta, setMeta] = useState({ cliente: '', obra: '', cidade: '', validade: 15, obra_id: '', lead_id: '' })
   const [obras, setObras] = useState([])
   const [picker, setPicker] = useState(null) // {gi, ii}
   const [showPrint, setShowPrint] = useState(false)
@@ -125,6 +125,31 @@ export default function OrcamentoWizard() {
   const [numero] = useState(() => 'MS-' + new Date().getFullYear() + '-' + String(Math.floor(100 + Math.random() * 899)))
 
   useEffect(() => { listObras().then(setObras).catch(() => {}) }, [])
+
+  // pré-preenche a partir de um lead ("Fazer orçamento" na aba Clientes)
+  useEffect(() => {
+    if (!prefill) return
+    const obs = (prefill.obs || '').toLowerCase()
+    const tipo = prefill.tipo === 'sobrado' ? 'sobrado' : 'terrea'
+    const areaM = obs.match(/(\d+)\s*m²/)
+    const area = areaM ? Number(areaM[1]) : (tipo === 'sobrado' ? 180 : 120)
+    const MAP = { 'quartos': 'Quarto', 'suítes': 'Suíte', 'banheiros': 'Banheiro', 'lavabo': 'Lavabo', 'cozinha': 'Cozinha', 'sala de estar': 'Sala de estar', 'sala de jantar': 'Sala de jantar', 'garagem (vagas)': 'Garagem', 'área de serviço': 'Área de serviço', 'escritório': 'Escritório', 'varanda': 'Varanda' }
+    const comodos = {}
+    Object.entries(MAP).forEach(([lbl, key]) => {
+      const m = obs.match(new RegExp('(\\d+)\\s+' + lbl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      if (m) comodos[key] = Math.max(comodos[key] || 0, Number(m[1]))
+    })
+    const def = tipo === 'sobrado'
+      ? { Quarto: 2, Suíte: 1, Banheiro: 2, Lavabo: 1, Cozinha: 1, 'Sala de estar': 1, 'Sala de jantar': 1, Garagem: 1, 'Área de serviço': 1, Varanda: 1 }
+      : { Quarto: 2, Suíte: 1, Banheiro: 1, Lavabo: 1, Cozinha: 1, 'Sala de estar': 1, Garagem: 1, 'Área de serviço': 1 }
+    const features = {}
+    if (obs.includes('piscina')) features.piscina = true
+    if (obs.includes('gourmet') || obs.includes('churrasqueira')) features.gourmet = true
+    if (obs.includes('lareira')) features.lareira = true
+    setCfg((c) => ({ ...c, tipo, area, comodos: Object.keys(comodos).length ? comodos : def, features }))
+    setMeta((m) => ({ ...m, cliente: prefill.nome || '', cidade: prefill.cidade || '', obra: prefill.modelo ? 'Casa ' + prefill.modelo : '', lead_id: prefill.id }))
+    setEtapa('config')
+  }, [prefill])
 
   function escolherTipo(tipo) {
     const def = tipo === 'sobrado'

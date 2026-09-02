@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { listLeadsProjeto, updateLead, deleteLead } from '../lib/data'
 import { MODELO_IMG } from '../lib/modelos'
 
@@ -6,6 +7,7 @@ const STATUS = { novo: 'Novo', contatado: 'Contatado', arquivado: 'Arquivado' }
 const inp = { width: '100%', padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface,#fff)', color: 'var(--ink)', fontSize: 13.5 }
 
 export default function Clientes() {
+  const nav = useNavigate()
   const [rows, setRows] = useState(null)
   const [view, setView] = useState('hub') // hub | leads | clientes
   const [edit, setEdit] = useState(null)
@@ -100,7 +102,10 @@ export default function Clientes() {
                     <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         {isLeads
-                          ? <button className="btn" style={{ fontSize: 11.5, padding: '5px 10px' }} onClick={() => tornarCliente(l)} title="Virou cliente">✓ Virou cliente</button>
+                          ? <>
+                              <button className="btn" style={{ fontSize: 11.5, padding: '5px 10px' }} onClick={() => nav('/orcamento', { state: { lead: l } })} title="Fazer orçamento detalhado">📄 Orçamento</button>
+                              <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 9px' }} onClick={() => tornarCliente(l)} title="Marcar como cliente">✓ Cliente</button>
+                            </>
                           : <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 10px' }} onClick={() => voltarLead(l)} title="Voltar para leads">↩ Lead</button>}
                         <button className="muted" title="Editar" onClick={() => setEdit({ ...l })} style={{ fontSize: 15, cursor: 'pointer' }}>✏️</button>
                         <button className="muted" title="Excluir" onClick={() => remover(l)} style={{ fontSize: 16, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>

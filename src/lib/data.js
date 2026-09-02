@@ -289,7 +289,7 @@ export async function listProdutosComFornecedor() {
 export async function listOrcamentos() {
   const { data, error } = await supabase
     .from('orcamentos')
-    .select('id,numero,cliente_nome,descricao,cidade,total,status,validade_dias,criado_em,obra_id')
+    .select('id,numero,cliente_nome,descricao,cidade,total,status,validade_dias,criado_em,obra_id,lead_id')
     .order('criado_em', { ascending: false })
   if (error) throw error
   return data || []
@@ -365,6 +365,8 @@ export async function aprovarOrcamento(orc) {
     await semearCustosDoOrcamento(orc.id, orc.obra_id)
     await semearVerbasDoOrcamento(orc.id, orc.obra_id)
   }
+  // orçamento aprovado que veio de um lead → esse lead vira cliente
+  if (orc.lead_id) { try { await supabase.from('leads_projeto').update({ cliente: true, status: 'contatado' }).eq('id', orc.lead_id) } catch (e) {} }
   return orc.obra_id || null
 }
 
@@ -563,6 +565,7 @@ export async function saveOrcamento(meta, rows) {
     .from('orcamentos')
     .insert({
       obra_id: meta.obra_id || null,
+      lead_id: meta.lead_id || null,
       numero: meta.numero,
       cliente_nome: meta.cliente,
       descricao: meta.obra,

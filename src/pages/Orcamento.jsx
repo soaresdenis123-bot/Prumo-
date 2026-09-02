@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { BRL, listOrcamentos, setOrcamentoStatus, aprovarOrcamento, orcamentoParaObra } from '../lib/data'
 import { useAuth } from '../lib/auth'
 import OrcamentoWizard from './OrcamentoWizard'
@@ -9,6 +9,8 @@ import OrcamentoWizard from './OrcamentoWizard'
  *  + lista dos orçamentos salvos (aprovar vira a lista de custos da obra).
  * ======================================================================= */
 export default function Orcamento() {
+  const location = useLocation()
+  const lead = location.state?.lead || null
   return (
     <>
       <div className="topbar"><div className="crumb"><b>Orçamento</b></div></div>
@@ -18,8 +20,9 @@ export default function Orcamento() {
 
         <OrcamentosSalvos />
 
-        <div className="sec-title">Novo orçamento</div>
-        <OrcamentoWizard />
+        <div className="sec-title">{lead ? `Novo orçamento · a partir do lead ${lead.nome || ''}` : 'Novo orçamento'}</div>
+        {lead && <div className="muted" style={{ fontSize: 12.5, margin: '-4px 0 10px' }}>Puxamos o que o cliente já informou. Refine os itens e salve — ao aprovar, ele vira cliente automaticamente.</div>}
+        <OrcamentoWizard prefill={lead} />
       </div>
     </>
   )
@@ -41,9 +44,10 @@ function OrcamentosSalvos() {
 
   async function mudarStatus(o, status) {
     if (status === 'aprovado') {
-      const obraId = await aprovarOrcamento({ id: o.id, obra_id: o.obra_id })
-      setMsg(obraId ? 'Aprovado — custos gerados na obra ✓' : 'Aprovado. Clique “Virar obra” para gerar a obra e os custos.')
-      setTimeout(() => setMsg(''), 3200)
+      const obraId = await aprovarOrcamento({ id: o.id, obra_id: o.obra_id, lead_id: o.lead_id })
+      const virou = o.lead_id ? ' O lead virou cliente ✓' : ''
+      setMsg((obraId ? 'Aprovado — custos gerados na obra ✓' : 'Aprovado. Clique “Virar obra” para gerar a obra e os custos.') + virou)
+      setTimeout(() => setMsg(''), 3600)
     } else { await setOrcamentoStatus(o.id, status) }
     load()
   }
