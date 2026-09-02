@@ -112,12 +112,13 @@ function gerarServicos(cfg) {
 }
 
 function gerarAmbientes(cfg) {
+  const tg = cfg.tierGlobal // nível padrão vindo do cliente (0/1/2), se houver
   const grupos = []
   COMODOS.forEach((tipo) => {
     const n = Number(cfg.comodos[tipo]) || 0
     for (let i = 1; i <= n; i++) {
       const base = AMBS[tipo]
-      const itens = base.itens().map((it) => ({ ...it, qtd: qtd(it, base.area) }))
+      const itens = base.itens().map((it) => ({ ...it, qtd: qtd(it, base.area), sel: (it.k === 'ch' && tg != null) ? tg : it.sel }))
       grupos.push({ nome: n > 1 ? `${tipo} ${i}` : tipo, area: base.area, itens })
     }
   })
@@ -157,7 +158,13 @@ export default function OrcamentoWizard({ prefill }) {
     if (obs.includes('piscina')) features.piscina = true
     if (obs.includes('gourmet') || obs.includes('churrasqueira')) features.gourmet = true
     if (obs.includes('lareira')) features.lareira = true
-    setCfg((c) => ({ ...c, tipo, area, comodos: Object.keys(comodos).length ? comodos : def, features }))
+    // acabamentos que o cliente escolheu no "Monte sua casa" (texto original)
+    const raw = prefill.obs || ''
+    const grab = (lbl) => { const m = raw.match(new RegExp(lbl + ':\\s*([^·]+)')); return m ? m[1].trim() : '' }
+    const acabCliente = { piso: grab('Piso'), telhado: grab('Telhado'), esquadrias: grab('Esquadrias'), paisagismo: grab('Paisagismo') }
+    // padrão do cliente vira o nível padrão do detalhado (0 popular · 1 médio · 2 alto)
+    const tierGlobal = String(prefill.padrao || '').toLowerCase().includes('alto') ? 2 : 1
+    setCfg((c) => ({ ...c, tipo, area, comodos: Object.keys(comodos).length ? comodos : def, features, acabCliente, tierGlobal }))
     setMeta((m) => ({ ...m, cliente: prefill.nome || '', cidade: prefill.cidade || '', obra: prefill.modelo ? 'Casa ' + prefill.modelo : '', lead_id: prefill.id }))
     setEtapa('config')
   }, [prefill])
@@ -218,6 +225,20 @@ export default function OrcamentoWizard({ prefill }) {
   if (etapa === 'config') return (
     <div>
       <button className="muted" style={{ fontSize: 12.5, marginBottom: 12 }} onClick={() => setEtapa('tipo')}>← Trocar tipo</button>
+      {cfg.acabCliente && (cfg.acabCliente.piso || cfg.acabCliente.telhado || cfg.acabCliente.esquadrias || cfg.acabCliente.paisagismo) && (
+        <div className="card" style={{ padding: 16, marginBottom: 16, borderLeft: '3px solid var(--accent)' }}>
+          <div style={{ fontSize: 11, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--accent2)', fontWeight: 700 }}>O que o cliente escolheu</div>
+          <div className="muted" style={{ fontSize: 12, margin: '2px 0 10px' }}>Puxado do “Monte sua casa”. Usamos o padrão {cfg.tierGlobal === 2 ? 'alto' : 'médio'} como nível inicial no detalhado — ajuste item a item na próxima etapa.</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 8 }}>
+            {[['Piso', cfg.acabCliente.piso], ['Telhado', cfg.acabCliente.telhado], ['Esquadrias', cfg.acabCliente.esquadrias], ['Paisagismo', cfg.acabCliente.paisagismo]].filter(([, v]) => v).map(([k, v]) => (
+              <div key={k} style={{ border: '1px solid var(--line)', borderRadius: 9, padding: '8px 11px' }}>
+                <div className="muted" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700 }}>{k}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 1 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="card" style={{ padding: 18, marginBottom: 16 }}>
         <div className="sec-title" style={{ marginTop: 0 }}>{cfg.tipo === 'sobrado' ? 'Sobrado' : 'Casa térrea'} · a casa</div>
         <div className="grid2">

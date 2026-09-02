@@ -132,6 +132,10 @@ export async function updateObra(id, fields) {
   const { error } = await supabase.from('obras').update(fields).eq('id', id)
   if (error) throw error
 }
+export async function deleteObra(id) {
+  const { error } = await supabase.from('obras').delete().eq('id', id)
+  if (error) throw error
+}
 
 // ---- fornecedores ----
 export async function listFornecedores() {
@@ -296,6 +300,15 @@ export async function listOrcamentos() {
 }
 export async function setOrcamentoStatus(id, status) {
   const { error } = await supabase.from('orcamentos').update({ status }).eq('id', id)
+  if (error) throw error
+}
+export async function updateOrcamentoMeta(id, campos) {
+  const { error } = await supabase.from('orcamentos').update(campos).eq('id', id)
+  if (error) throw error
+}
+export async function deleteOrcamento(id) {
+  await supabase.from('orcamento_itens').delete().eq('orcamento_id', id)
+  const { error } = await supabase.from('orcamentos').delete().eq('id', id)
   if (error) throw error
 }
 export async function getOrcamentoItens(id) {

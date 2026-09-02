@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { listObras, progresso } from '../lib/data'
+import { listObras, progresso, deleteObra } from '../lib/data'
 import { useAuth } from '../lib/auth'
 
 export default function Obras() {
@@ -12,6 +12,13 @@ export default function Obras() {
   useEffect(() => {
     listObras().then(setObras).catch((e) => setErr(e.message))
   }, [])
+
+  async function remover(o, e) {
+    e.stopPropagation()
+    if (!confirm(`Excluir a obra "${o.nome}"? Essa ação não volta.`)) return
+    try { await deleteObra(o.id); setObras((os) => os.filter((x) => x.id !== o.id)) }
+    catch (er) { alert('Não deu pra excluir: ' + er.message) }
+  }
 
   if (err) return <div className="content"><div className="center-note">Erro: {err}</div></div>
   if (!obras) return <div className="spin" />
@@ -37,7 +44,10 @@ export default function Obras() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                   <div><div style={{ fontSize: 18, fontWeight: 600 }}>{o.nome}</div>
                     <div className="muted" style={{ fontSize: 12 }}>{o.cliente_nome || '—'}</div></div>
-                  <span className={'pill ' + st}><span className="d" />{p >= 100 ? 'Concluída' : p > 0 ? 'Em obra' : 'Início'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className={'pill ' + st}><span className="d" />{p >= 100 ? 'Concluída' : p > 0 ? 'Em obra' : 'Início'}</span>
+                    {isStaff && <button className="muted" title="Excluir obra" onClick={(e) => remover(o, e)} style={{ fontSize: 17, cursor: 'pointer', color: 'var(--crit,#b23)', lineHeight: 1 }}>×</button>}
+                  </div>
                 </div>
                 <div className="muted" style={{ fontSize: 12, margin: '12px 0 8px' }}>{o.endereco || '—'} · {o.cidade || ''}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { BRL, listOrcamentos, setOrcamentoStatus, aprovarOrcamento, orcamentoParaObra } from '../lib/data'
+import { BRL, listOrcamentos, setOrcamentoStatus, aprovarOrcamento, orcamentoParaObra, updateOrcamentoMeta, deleteOrcamento } from '../lib/data'
 import { useAuth } from '../lib/auth'
 import OrcamentoWizard from './OrcamentoWizard'
 
@@ -38,9 +38,20 @@ function OrcamentosSalvos() {
   const { session } = useAuth()
   const [orcs, setOrcs] = useState(null)
   const [msg, setMsg] = useState('')
+  const [edit, setEdit] = useState(null)
 
   async function load() { try { setOrcs(await listOrcamentos()) } catch { setOrcs([]) } }
   useEffect(() => { load() }, [])
+
+  async function salvarEdit() {
+    const { id, cliente_nome, descricao, cidade, validade_dias } = edit
+    await updateOrcamentoMeta(id, { cliente_nome, descricao, cidade, validade_dias: Number(validade_dias) || 15 })
+    setEdit(null); load()
+  }
+  async function remover(o) {
+    if (!confirm(`Excluir o orçamento ${o.numero || ''} de ${o.cliente_nome || '—'}? Essa ação não volta.`)) return
+    await deleteOrcamento(o.id); load()
+  }
 
   async function mudarStatus(o, status) {
     if (status === 'aprovado') {
@@ -86,9 +97,13 @@ function OrcamentosSalvos() {
                     </select>
                   </td>
                   <td style={{ padding: '11px 14px', textAlign: 'right' }}>
-                    {o.obra_id
-                      ? <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => nav('/obra/' + o.obra_id)}>Ver obra</button>
-                      : <button className="btn" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => converter(o)}>Virar obra</button>}
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+                      {o.obra_id
+                        ? <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => nav('/obra/' + o.obra_id)}>Ver obra</button>
+                        : <button className="btn" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => converter(o)}>Virar obra</button>}
+                      <button className="muted" title="Editar" onClick={() => setEdit({ ...o })} style={{ fontSize: 15, cursor: 'pointer' }}>✏️</button>
+                      <button className="muted" title="Excluir" onClick={() => remover(o)} style={{ fontSize: 16, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -96,6 +111,25 @@ function OrcamentosSalvos() {
           </table>
         </div>
       )}
+
+      {edit && (
+        <div onClick={() => setEdit(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 50, display: 'grid', placeItems: 'center', padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: 20, width: 'min(460px,100%)' }}>
+            <div className="sec-title" style={{ marginTop: 0 }}>Editar orçamento {edit.numero || ''}</div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div className="field"><label>Cliente</label><input style={inpMdl} value={edit.cliente_nome || ''} onChange={(e) => setEdit({ ...edit, cliente_nome: e.target.value })} /></div>
+              <div className="field"><label>Descrição / obra</label><input style={inpMdl} value={edit.descricao || ''} onChange={(e) => setEdit({ ...edit, descricao: e.target.value })} /></div>
+              <div className="field"><label>Local</label><input style={inpMdl} value={edit.cidade || ''} onChange={(e) => setEdit({ ...edit, cidade: e.target.value })} /></div>
+              <div className="field"><label>Validade (dias)</label><input type="number" style={inpMdl} value={edit.validade_dias || 15} onChange={(e) => setEdit({ ...edit, validade_dias: e.target.value })} /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+              <button className="btn ghost" onClick={() => setEdit(null)}>Cancelar</button>
+              <button className="btn" onClick={salvarEdit}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+const inpMdl = { width: '100%', padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface,#fff)', color: 'var(--ink)', fontSize: 13.5 }
