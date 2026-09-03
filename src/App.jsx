@@ -17,6 +17,7 @@ import Portal from './pages/Portal'
 import PublicObra from './pages/PublicObra'
 import { lazy, Suspense } from 'react'
 import MonteSuaCasa from './pages/MonteSuaCasa'
+import Apresentacao from './pages/Apresentacao'
 const Portfolio = lazy(() => import('./pages/Portfolio'))
 import Clientes from './pages/Clientes'
 
@@ -63,6 +64,8 @@ export default function App() {
     <Routes>
       {/* Link público do cliente — sem login */}
       <Route path="/o/:token" element={<PublicObra />} />
+      {/* Apresentação cinematográfica por cliente — sem login */}
+      <Route path="/apresentacao/:token" element={<Apresentacao />} />
       {/* Página pública de captação — cliente monta a casa dele */}
       <Route path="/monte-sua-casa" element={<MonteSuaCasa />} />
       {/* Portfólio público de acabamentos */}

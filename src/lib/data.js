@@ -496,6 +496,29 @@ export async function contarLeadsNovos() {
   return count || 0
 }
 
+// ---- Apresentação por cliente (link público, sem login) ----
+// dados da apresentação de um cliente a partir do token (RPC pública)
+export async function apresentacaoPublica(token) {
+  const { data, error } = await supabase.rpc('apresentacao_publica', { p_token: token })
+  if (error) throw error
+  return data // { nome, cidade, tipo, padrao, telhado, modelo, obs, apres } ou null
+}
+// sobe um render/foto personalizada do cliente (bucket público 'catalogo')
+export async function uploadApresRender(leadId, file) {
+  const ext = (file.name.split('.').pop() || 'jpg').replace(/[^\w]/g, '')
+  const path = `apres/${leadId}/${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('catalogo').upload(path, file, { upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from('catalogo').getPublicUrl(path)
+  return data?.publicUrl || null
+}
+// grava/atualiza o bloco de overrides da apresentação (merge no jsonb apres)
+export async function salvarApres(leadId, apresAtual, patch) {
+  const novo = { ...(apresAtual || {}), ...patch }
+  await updateLead(leadId, { apres: novo })
+  return novo
+}
+
 // ---- link público do cliente (sem login) ----
 export async function getObraPublica(token) {
   const { data, error } = await supabase.rpc('obra_publica', { p_token: token })

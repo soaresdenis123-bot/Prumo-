@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listLeadsProjeto, updateLead, deleteLead } from '../lib/data'
+import { listLeadsProjeto, updateLead, deleteLead, uploadApresRender, salvarApres } from '../lib/data'
 import { MODELO_IMG } from '../lib/modelos'
 import { parseSelecoes, SUPERFICIES, ACAB_POR_ID, custoSuperficie } from '../lib/acabamentos'
 import { brl } from '../lib/precificacao'
@@ -14,6 +14,9 @@ export default function Clientes() {
   const [view, setView] = useState('hub') // hub | leads | clientes
   const [edit, setEdit] = useState(null)
   const [verSel, setVerSel] = useState(null) // lead cujas seleções estão abertas
+  const [apres, setApres] = useState(null) // lead cuja apresentação está aberta
+  const [apresBusy, setApresBusy] = useState('')
+  const [copiado, setCopiado] = useState(false)
 
   async function load() { try { setRows(await listLeadsProjeto()) } catch { setRows([]) } }
   useEffect(() => { load() }, [])
@@ -29,6 +32,33 @@ export default function Clientes() {
   async function voltarLead(l) { await updateLead(l.id, { cliente: false }); load() }
   async function remover(l) { if (!confirm(`Excluir ${l.nome || 'este registro'}? Essa ação não volta.`)) return; await deleteLead(l.id); load() }
   async function salvarEdit() { const { id, nome, contato, cidade, obs } = edit; await updateLead(id, { nome, contato, cidade, obs }); setEdit(null); load() }
+
+  // ---- apresentação por cliente ----
+  const apresLink = (l) => l?.share_token ? `${window.location.origin}/apresentacao/${l.share_token}` : ''
+  async function subirRender(file) {
+    if (!file || !apres) return
+    setApresBusy('upload')
+    try {
+      const url = await uploadApresRender(apres.id, file)
+      const novo = await salvarApres(apres.id, apres.apres, { render_url: url, personalizada: true })
+      setApres({ ...apres, apres: novo }); load()
+    } catch (e) { alert('Não deu pra subir a imagem: ' + (e.message || e)) }
+    setApresBusy('')
+  }
+  async function removerRender() {
+    setApresBusy('rm')
+    try { const novo = await salvarApres(apres.id, apres.apres, { render_url: null, personalizada: false }); setApres({ ...apres, apres: novo }); load() }
+    catch (e) { alert('Erro: ' + (e.message || e)) }
+    setApresBusy('')
+  }
+  async function salvarFamilia(v) {
+    const novo = await salvarApres(apres.id, apres.apres, { familia: v || null })
+    setApres({ ...apres, apres: novo }); load()
+  }
+  function copiarLink(l) {
+    const url = apresLink(l); if (!url) return
+    try { navigator.clipboard.writeText(url); setCopiado(true); setTimeout(() => setCopiado(false), 1800) } catch { /* noop */ }
+  }
 
   /* ---------- HUB: dois cards ---------- */
   if (view === 'hub') return (
@@ -111,6 +141,7 @@ export default function Clientes() {
                             </>
                           : <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 10px' }} onClick={() => voltarLead(l)} title="Voltar para leads">↩ Lead</button>}
                         {parseSelecoes(l.obs) && <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 9px' }} onClick={() => setVerSel(l)} title="Ver materiais que o cliente escolheu">🖼 Seleção</button>}
+                        <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 9px' }} onClick={() => { setCopiado(false); setApres(l) }} title="Gerar e compartilhar a apresentação deste cliente">🎬 Apresentação</button>
                         <button className="muted" title="Editar" onClick={() => setEdit({ ...l })} style={{ fontSize: 15, cursor: 'pointer' }}>✏️</button>
                         <button className="muted" title="Excluir" onClick={() => remover(l)} style={{ fontSize: 16, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
                       </div>
@@ -168,6 +199,79 @@ export default function Clientes() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
                 <button className="btn ghost" onClick={() => setVerSel(null)}>Fechar</button>
                 <button className="btn" onClick={() => { setVerSel(null); nav('/orcamento', { state: { lead: verSel } }) }}>📄 Fazer orçamento</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* modal: apresentação por cliente */}
+      {apres && (() => {
+        const link = apresLink(apres)
+        const a = apres.apres || {}
+        const temModelo = !!MODELO_IMG[apres.modelo]
+        return (
+          <div onClick={() => setApres(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 55, display: 'grid', placeItems: 'center', padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: 22, width: 'min(560px,100%)', maxHeight: '92vh', overflowY: 'auto' }}>
+              <div className="sec-title" style={{ marginTop: 0 }}>🎬 Apresentação de {apres.nome || 'cliente'}</div>
+              <div className="muted" style={{ fontSize: 12.5, marginTop: -4 }}>Um link único, cinematográfico, com o nome, o modelo, os acabamentos e o preço deste cliente.</div>
+
+              {!apres.share_token ? (
+                <div style={{ marginTop: 16, border: '1px solid var(--line)', borderRadius: 10, padding: 14, fontSize: 13, background: 'rgba(180,120,40,.08)' }}>
+                  Este cliente ainda não tem link. Rode a migração <b>prumo_v16.sql</b> no Supabase (gera o token) e recarregue a página.
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginTop: 16 }}>
+                    <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--ink3)', fontWeight: 700 }}>Link do cliente</label>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                      <input readOnly value={link} onFocus={(e) => e.target.select()} style={{ ...inp, flex: 1, minWidth: 220, fontSize: 12.5 }} />
+                      <button className="btn" style={{ fontSize: 12.5, padding: '8px 12px' }} onClick={() => copiarLink(apres)}>{copiado ? '✓ Copiado' : 'Copiar'}</button>
+                      <a className="btn ghost" href={link} target="_blank" rel="noreferrer" style={{ fontSize: 12.5, padding: '8px 12px', textDecoration: 'none' }}>Abrir</a>
+                    </div>
+                    <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>Mande esse link pro cliente (WhatsApp, e-mail). Abre no navegador, sem login.</div>
+                  </div>
+
+                  <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+                    <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--ink3)', fontWeight: 700 }}>Projeção 3D da casa</label>
+                    {a.render_url ? (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <img src={a.render_url} alt="Render personalizado" style={{ width: 96, height: 62, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+                          <div style={{ fontSize: 12.5 }}>
+                            <div style={{ fontWeight: 700, color: 'var(--accent2,#c88)' }}>Render personalizado ativo</div>
+                            <div className="muted">O aviso de “modelo de referência” fica escondido — é a casa dele.</div>
+                          </div>
+                        </div>
+                        <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px', marginTop: 10 }} disabled={apresBusy === 'rm'} onClick={removerRender}>{apresBusy === 'rm' ? 'Removendo...' : 'Remover e voltar ao modelo de referência'}</button>
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <img src={MODELO_IMG[apres.modelo] || '/modelos/m06.jpg'} alt="Modelo referência" style={{ width: 96, height: 62, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)', opacity: .95 }} />
+                          <div style={{ fontSize: 12.5 }}>
+                            <div style={{ fontWeight: 700 }}>{temModelo ? `Modelo de referência: ${apres.modelo}` : 'Modelo de referência provisório'}</div>
+                            <div className="muted">Aparece com o selo “modelo de referência (provisório)”. Suba o render/foto da casa personalizada pra trocar.</div>
+                          </div>
+                        </div>
+                        <label className="btn ghost" style={{ fontSize: 12, padding: '6px 10px', marginTop: 10, display: 'inline-block', cursor: 'pointer' }}>
+                          {apresBusy === 'upload' ? 'Enviando...' : '⬆ Subir render/foto personalizada'}
+                          <input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && subirRender(e.target.files[0])} />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+                    <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--ink3)', fontWeight: 700 }}>Família (opcional)</label>
+                    <div className="muted" style={{ fontSize: 11.5, margin: '4px 0 6px' }}>Aparece na capa: “Proposta exclusiva · Família ...”.</div>
+                    <input defaultValue={a.familia || ''} onBlur={(e) => e.target.value !== (a.familia || '') && salvarFamilia(e.target.value.trim())} placeholder="ex.: Torres de Castro" style={{ ...inp, fontSize: 13 }} />
+                  </div>
+                </>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                <button className="btn ghost" onClick={() => setApres(null)}>Fechar</button>
               </div>
             </div>
           </div>
