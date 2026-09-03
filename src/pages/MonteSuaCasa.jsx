@@ -217,7 +217,10 @@ export default function MonteSuaCasa() {
           </div>
 
           <div style={{ borderTop: '1px solid var(--line)', margin: '18px 0 4px', paddingTop: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Acabamentos principais</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Acabamentos principais</div>
+              <a href="/acabamentos" target="_blank" rel="noopener" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>Ver portfólio completo de acabamentos →</a>
+            </div>
             <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Escolha o padrão de piso, cobertura e esquadrias. Pode misturar médio e alto, do seu jeito.</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
               {ACAB.map(([k, label, baseOpts]) => {

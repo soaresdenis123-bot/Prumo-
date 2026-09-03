@@ -15,7 +15,9 @@ import FinanceiroObra from './pages/FinanceiroObra'
 import Time from './pages/Time'
 import Portal from './pages/Portal'
 import PublicObra from './pages/PublicObra'
+import { lazy, Suspense } from 'react'
 import MonteSuaCasa from './pages/MonteSuaCasa'
+const Portfolio = lazy(() => import('./pages/Portfolio'))
 import Clientes from './pages/Clientes'
 
 function Spinner() {
@@ -63,6 +65,8 @@ export default function App() {
       <Route path="/o/:token" element={<PublicObra />} />
       {/* Página pública de captação — cliente monta a casa dele */}
       <Route path="/monte-sua-casa" element={<MonteSuaCasa />} />
+      {/* Portfólio público de acabamentos */}
+      <Route path="/acabamentos" element={<Suspense fallback={<div className="spin" />}><Portfolio /></Suspense>} />
       {/* Todo o resto passa pelo login */}
       <Route path="/*" element={<AppGated />} />
     </Routes>
