@@ -212,7 +212,7 @@ section{position:relative;padding:120px 26px;overflow:hidden}
 <section id="s2">
   <div class="wrap">
     <div class="eyebrow rv">Quem assina a sua obra</div>
-    <h2 class="rv d1" style="margin-top:16px;max-width:18ch">Do primeiro perfil ao acabamento, <span class="amber">a obra é nossa</span>.</h2>
+    <h2 class="rv d1" style="margin-top:16px;max-width:16ch">O sonho é seu.<br><span class="amber">A engenharia é nossa.</span></h2>
     <p class="lead rv d2" style="margin-top:20px">A MS é uma construtora familiar que trouxe o steel frame para o Rio Grande do Sul e constrói com equipe própria, do primeiro perfil de aço ao último acabamento. À frente, o engenheiro responsável Gervásio Medeiros Soares, com mais de 25 anos de obra, de residências a shopping centers. Engenharia industrializada, dentro da NBR 16970, com ART e CREA: prazo definido, preço fechado e o financiamento encaminhado do jeito certo.</p>
     <div class="stats">
       <div class="stat rv d1"><div class="n" data-to="60" data-suf="%">0</div><div class="l">mais rápida que a obra convencional</div></div>
