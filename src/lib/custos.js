@@ -14,7 +14,7 @@
 export const MO_PCT_PADRAO = 0.25 // mão de obra: 25% (faixa aceita 20%–30%)
 export const MO_MIN = 0.20
 export const MO_MAX = 0.30
-export const MARGEM_PCT_PADRAO = 0.30 // margem de venda inicial: 30%
+export const MARGEM_PCT_PADRAO = 0.10 // margem de venda inicial: 10% (rev GS)
 
 // custo instalado = material + mão de obra
 export const custoInstalado = (compra, mo = MO_PCT_PADRAO) => (Number(compra) || 0) * (1 + mo)
@@ -111,8 +111,8 @@ export const MATERIAIS = [
 //  padrão. Escala direto com a área. Troque com seus custos reais depois.
 // =========================================================================
 export const OBRA_VENDA_M2 = {
-  medio: 3400, // R$/m² — steel frame chave na mão, médio padrão (RS/SC/PR)
-  alto: 4600,  // R$/m² — alto padrão
+  medio: 3800, // R$/m² — steel frame chave na mão, médio padrão (rev GS)
+  alto: 5200,  // R$/m² — alto padrão (rev GS)
 }
 
 // adicionais de venda (fora do m² de obra)

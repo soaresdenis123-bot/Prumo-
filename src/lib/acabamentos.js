@@ -17,23 +17,23 @@ const A = (id, superficie, nome, padrao, compra, mo, img) => ({ id, superficie, 
 
 // ---- PISOS (R$/m²) ----
 export const PISOS = [
-  A('piso-porcelanato-acetinado', 'piso', 'Porcelanato acetinado 60×60', 'medio', 80, 0.55, ACABIMG['piso-porcelanato-acetinado']),
-  A('piso-porcelanato-polido', 'piso', 'Porcelanato polido 60×60', 'medio', 90, 0.50, ACABIMG['piso-porcelanato-polido']),
-  A('piso-vinilico-spc', 'piso', 'Piso vinílico / laminado SPC', 'medio', 70, 0.35, ACABIMG['piso-vinilico-spc']),
-  A('piso-ceramica-premium', 'piso', 'Cerâmica premium', 'medio', 55, 0.60, ACABIMG['piso-ceramica-premium']),
-  A('piso-porcelanato-retificado', 'piso', 'Porcelanato retificado grande formato', 'alto', 140, 0.50, ACABIMG['piso-porcelanato-retificado']),
-  A('piso-porcelanato-marmorizado', 'piso', 'Porcelanato marmorizado polido', 'alto', 180, 0.45, ACABIMG['piso-porcelanato-marmorizado']),
-  A('piso-porcelanato-importado', 'piso', 'Porcelanato importado', 'alto', 260, 0.45, ACABIMG['piso-porcelanato-importado']),
-  A('piso-madeira-engenheirada', 'piso', 'Madeira engenheirada / vinílico premium', 'alto', 160, 0.40, ACABIMG['piso-madeira-engenheirada']),
+  A('piso-porcelanato-acetinado', 'piso', 'Porcelanato acetinado 60×60', 'medio', 120, 0.45, ACABIMG['piso-porcelanato-acetinado']),
+  A('piso-porcelanato-polido', 'piso', 'Porcelanato polido 60×60', 'medio', 120, 0.45, ACABIMG['piso-porcelanato-polido']),
+  A('piso-vinilico-spc', 'piso', 'Piso vinílico / laminado SPC', 'medio', 90, 0.35, ACABIMG['piso-vinilico-spc']),
+  A('piso-ceramica-premium', 'piso', 'Cerâmica premium', 'medio', 80, 0.55, ACABIMG['piso-ceramica-premium']),
+  A('piso-porcelanato-retificado', 'piso', 'Porcelanato retificado grande formato', 'alto', 160, 0.4, ACABIMG['piso-porcelanato-retificado']),
+  A('piso-porcelanato-marmorizado', 'piso', 'Porcelanato marmorizado polido', 'alto', 240, 0.4, ACABIMG['piso-porcelanato-marmorizado']),
+  A('piso-porcelanato-importado', 'piso', 'Porcelanato importado', 'alto', 300, 0.4, ACABIMG['piso-porcelanato-importado']),
+  A('piso-madeira-engenheirada', 'piso', 'Madeira engenheirada / vinílico premium', 'alto', 160, 0.4, ACABIMG['piso-madeira-engenheirada']),
 ]
 
 // ---- PAREDES (R$/m² de parede; área de parede ≈ 2,7× a área do piso) ----
 export const PAREDES = [
   // médio padrão
-  A('par-pintura-fosca', 'parede', 'Pintura acrílica fosca', 'medio', 10, 1.30, ACABIMG['par-pintura-fosca']),
-  A('par-pintura-acetinada', 'parede', 'Pintura acrílica acetinada', 'medio', 14, 1.20, ACABIMG['par-pintura-acetinada']),
-  A('par-textura-grafiato', 'parede', 'Textura projetada grafiato', 'medio', 22, 0.90, ACABIMG['par-textura-grafiato']),
-  A('par-textura-riscada', 'parede', 'Textura projetada riscada', 'medio', 24, 0.90, ACABIMG['par-textura-riscada']),
+  A('par-pintura-fosca', 'parede', 'Pintura acrílica fosca', 'medio', 18, 0.9, ACABIMG['par-pintura-fosca']),
+  A('par-pintura-acetinada', 'parede', 'Pintura acrílica acetinada', 'medio', 22, 0.9, ACABIMG['par-pintura-acetinada']),
+  A('par-textura-grafiato', 'parede', 'Textura projetada grafiato', 'medio', 60, 0.9, ACABIMG['par-textura-grafiato']),
+  A('par-textura-riscada', 'parede', 'Textura projetada riscada', 'medio', 60, 0.9, ACABIMG['par-textura-riscada']),
   A('par-revest-3d-gesso', 'parede', 'Revestimento 3D (gesso)', 'medio', 90, 0.50, ACABIMG['par-revest-3d-gesso']),
   A('par-papel-vinilico', 'parede', 'Papel de parede vinílico', 'medio', 60, 0.40, ACABIMG['par-papel-vinilico']),
   A('par-cimenticio', 'parede', 'Revestimento cimentício', 'medio', 70, 0.60, ACABIMG['par-cimenticio']),
@@ -59,37 +59,37 @@ export const PAREDES = [
 
 // ---- TETO / FORRO (R$/m²) ----
 export const TETOS = [
-  A('teto-gesso', 'teto', 'Forro de gesso liso', 'medio', 55, 0.60, null),
-  A('teto-gesso-sanca', 'teto', 'Gesso + sanca + LED', 'alto', 90, 0.60, null),
-  A('teto-forro-pvc', 'teto', 'Forro PVC premium', 'medio', 38, 0.80, ACABIMG['teto-forro-pvc']),
-  A('teto-forro-wpc', 'teto', 'Forro WPC', 'alto', 90, 0.50, ACABIMG['teto-forro-wpc']),
+  A('teto-gesso', 'teto', 'Forro de gesso liso', 'medio', 100, 0.35, null),
+  A('teto-gesso-sanca', 'teto', 'Gesso + sanca + LED', 'alto', 140, 0.35, null),
+  A('teto-forro-pvc', 'teto', 'Forro PVC premium', 'medio', 80, 0.3, ACABIMG['teto-forro-pvc']),
+  A('teto-forro-wpc', 'teto', 'Forro WPC', 'alto', 120, 0.4, ACABIMG['teto-forro-wpc']),
 ]
 
 // ---- ESQUADRIAS (R$/unidade; nº de unidades estimado pela área) ----
 export const ESQUADRIAS = [
-  A('esq-aluminio-branca', 'esquadria', 'Alumínio linha branca', 'medio', 480, 0.20, ACABIMG['esq-aluminio-branca']),
-  A('esq-pvc', 'esquadria', 'PVC', 'medio', 420, 0.20, ACABIMG['esq-pvc']),
-  A('esq-aluminio-anodizado', 'esquadria', 'Alumínio anodizado', 'medio', 650, 0.20, ACABIMG['esq-aluminio-anodizado']),
-  A('esq-aluminio-premium', 'esquadria', 'Alumínio premium (preto / amadeirado)', 'alto', 900, 0.20, ACABIMG['esq-aluminio-premium']),
-  A('esq-pvc-alto', 'esquadria', 'PVC alto desempenho', 'alto', 700, 0.20, ACABIMG['esq-pvc-alto']),
-  A('esq-vidro-duplo', 'esquadria', 'Vidro duplo acústico / térmico', 'alto', 1100, 0.25, ACABIMG['esq-vidro-duplo']),
-  A('esq-vidro-correr-minimal', 'esquadria', 'Vidro de correr amplo / sistema minimal', 'alto', 2200, 0.25, ACABIMG['esq-vidro-correr-minimal']),
+  A('esq-aluminio-branca', 'esquadria', 'Alumínio linha branca', 'medio', 1800, 0.2, ACABIMG['esq-aluminio-branca']),
+  A('esq-pvc', 'esquadria', 'PVC', 'medio', 1400, 0.2, ACABIMG['esq-pvc']),
+  A('esq-aluminio-anodizado', 'esquadria', 'Alumínio anodizado', 'medio', 2000, 0.2, ACABIMG['esq-aluminio-anodizado']),
+  A('esq-aluminio-premium', 'esquadria', 'Alumínio premium (preto / amadeirado)', 'alto', 2200, 0.2, ACABIMG['esq-aluminio-premium']),
+  A('esq-pvc-alto', 'esquadria', 'PVC alto desempenho', 'alto', 1800, 0.2, ACABIMG['esq-pvc-alto']),
+  A('esq-vidro-duplo', 'esquadria', 'Vidro duplo acústico / térmico', 'alto', 2400, 0.25, ACABIMG['esq-vidro-duplo']),
+  A('esq-vidro-correr-minimal', 'esquadria', 'Vidro de correr amplo / sistema minimal', 'alto', 3000, 0.25, ACABIMG['esq-vidro-correr-minimal']),
 ]
 
 // ---- TELHADO / COBERTURA (R$/m² de telhado; área ≈ projeção × 1,25) ----
 const T = (id, nome, padrao, compra, mo, img, platibanda = false) => ({ id, nome, padrao, compra, mo, img: img || null, platibanda })
 export const TELHADOS = [
-  T('telha-concreto', 'Telha de concreto', 'medio', 55, 0.30, ACABIMG['telha-concreto']),
-  T('telha-ceramica', 'Telha cerâmica', 'medio', 70, 0.35, ACABIMG['telha-ceramica']),
-  T('telha-metalica', 'Telha metálica (galvalume)', 'medio', 60, 0.25, ACABIMG['telha-metalica']),
-  T('fibrocimento-forro', 'Fibrocimento com forro', 'medio', 45, 0.30, ACABIMG['fibrocimento-forro']),
-  T('telha-ceramica-esmaltada', 'Telha cerâmica esmaltada', 'alto', 110, 0.35, ACABIMG['telha-ceramica-esmaltada']),
-  T('telha-shingle', 'Telha shingle', 'alto', 120, 0.30, ACABIMG['telha-shingle']),
-  T('laje-impermeabilizada', 'Laje impermeabilizada / telhado embutido', 'alto', 130, 0.30, ACABIMG['laje-impermeabilizada']),
-  T('telha-termoacustica', 'Telha termoacústica (sanduíche)', 'alto', 135, 0.25, ACABIMG['telha-termoacustica']),
+  T('telha-concreto', 'Telha de concreto', 'medio', 70, 0.3, ACABIMG['telha-concreto']),
+  T('telha-ceramica', 'Telha cerâmica', 'medio', 125, 0.35, ACABIMG['telha-ceramica']),
+  T('telha-metalica', 'Telha metálica (galvalume)', 'medio', 90, 0.25, ACABIMG['telha-metalica']),
+  T('fibrocimento-forro', 'Fibrocimento com forro', 'medio', 65, 0.3, ACABIMG['fibrocimento-forro']),
+  T('telha-ceramica-esmaltada', 'Telha cerâmica esmaltada', 'alto', 145, 0.35, ACABIMG['telha-ceramica-esmaltada']),
+  T('telha-shingle', 'Telha shingle', 'alto', 165, 0.3, ACABIMG['telha-shingle']),
+  T('laje-impermeabilizada', 'Laje impermeabilizada / telhado embutido', 'alto', 150, 0.3, ACABIMG['laje-impermeabilizada']),
+  T('telha-termoacustica', 'Telha termoacústica (sanduíche)', 'alto', 185, 0.25, ACABIMG['telha-termoacustica']),
   // só para platibanda
-  T('platibanda-fibrocimento', 'Fibrocimento (platibanda)', 'medio', 45, 0.30, ACABIMG['platibanda-fibrocimento'], true),
-  T('platibanda-metalica', 'Telha metálica (platibanda)', 'medio', 60, 0.25, ACABIMG['platibanda-metalica'], true),
+  T('platibanda-fibrocimento', 'Fibrocimento (platibanda)', 'medio', 65, 0.3, ACABIMG['platibanda-fibrocimento'], true),
+  T('platibanda-metalica', 'Telha metálica (platibanda)', 'medio', 90, 0.25, ACABIMG['platibanda-metalica'], true),
 ]
 export const TELHADOS_POR_ID = {}
 TELHADOS.forEach((t) => { TELHADOS_POR_ID[t.id] = t })

@@ -9,7 +9,7 @@ import PlumbMark from '../components/PlumbMark'
 const EMAIL_KEY = '7deb7e3c-19dd-4aeb-a043-12d7bfca6b17'
 const TELHADO_LABEL = { aparente: 'Telhado aparente', platibanda: 'Platibanda' }
 // custo estrutural (fundação + estrutura steel frame + fechamento + instalações), R$/m². Cobertura entra à parte (escolha).
-const BASE_ESTRUTURAL = 1600
+const BASE_ESTRUTURAL = 2780
 const SERVICOS_M2 = 225 // projetos (arquitetura, estrutural, fundação, aprovação)
 const inp = { width: '100%', padding: '11px 13px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface,#fff)', color: 'var(--ink)', fontSize: 14 }
 let AMBID = 1
