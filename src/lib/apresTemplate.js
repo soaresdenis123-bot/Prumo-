@@ -211,13 +211,13 @@ section{position:relative;padding:120px 26px;overflow:hidden}
 
 <section id="s2">
   <div class="wrap">
-    <div class="eyebrow rv">Quem constrói com você</div>
-    <h2 class="rv d1" style="margin-top:16px;max-width:16ch">Uma construtora nova, com mãos de <span class="amber">mais de 25 anos</span>.</h2>
-    <p class="lead rv d2" style="margin-top:20px">A MS nasceu para construir de um jeito melhor: engenharia, tecnologia e método. Por trás de cada obra, um responsável técnico com mais de 25 anos, com experiência em residências e em shopping centers no RS. A mesma engenharia de obras de grande porte, agora com CREA e ART, cuidando de cada detalhe da sua casa.</p>
+    <div class="eyebrow rv">Quem assina a sua obra</div>
+    <h2 class="rv d1" style="margin-top:16px;max-width:18ch">Do primeiro perfil ao acabamento, <span class="amber">a obra é nossa</span>.</h2>
+    <p class="lead rv d2" style="margin-top:20px">A MS é uma construtora familiar que trouxe o steel frame para o Rio Grande do Sul e constrói com equipe própria, do primeiro perfil de aço ao último acabamento. À frente, o engenheiro responsável Gervásio Medeiros Soares, com mais de 25 anos de obra, de residências a shopping centers. Engenharia industrializada, dentro da NBR 16970, com ART e CREA: prazo definido, preço fechado e o financiamento encaminhado do jeito certo.</p>
     <div class="stats">
-      <div class="stat rv d1"><div class="n" data-to="25" data-suf="+">0</div><div class="l">anos de engenharia, do projeto à entrega</div></div>
-      <div class="stat rv d2"><div class="n" data-to="16" data-suf="">0</div><div class="l">modelos de casas no nosso portfólio</div></div>
-      <div class="stat rv d3"><div class="n" data-to="100" data-suf="%">0</div><div class="l">obra com responsável técnico e ART</div></div>
+      <div class="stat rv d1"><div class="n" data-to="60" data-suf="%">0</div><div class="l">mais rápida que a obra convencional</div></div>
+      <div class="stat rv d2"><div class="n" data-to="25" data-suf="+">0</div><div class="l">anos do engenheiro responsável na obra</div></div>
+      <div class="stat rv d3"><div class="n" data-to="80" data-suf="%">0</div><div class="l">menos desperdício, com precisão de fábrica</div></div>
       <div class="stat rv d4"><div class="n" data-to="24" data-suf="h">0</div><div class="l">acompanhamento por câmera na obra</div></div>
     </div>
   </div>
