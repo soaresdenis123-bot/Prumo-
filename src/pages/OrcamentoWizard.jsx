@@ -106,18 +106,18 @@ function gerarProjeto(cfg) {
   // cada push usa coef = quantidade absoluta já calculada (footprint, área, etc.)
   const P = []
   P.push(AU('Limpeza do terreno / terraplanagem', 'm²', footprint, 25, '', true, 'Preliminares'))
-  P.push(AU('Fundação — radier', 'm²', footprint, 190, '', true, 'Fundação'))
+  P.push(AU('Fundação — radier', 'm²', footprint, 540, '', true, 'Fundação'))
   P.push(AU('Kit estrutura steel frame', 'm²', A, 380, '', true, 'Estrutura'))
   P.push(AU('Montagem da estrutura (mão de obra)', 'm²', A, 120, '', true, 'Estrutura'))
-  P.push(AU('Fechamento (OSB + placa cimentícia + isolamento)', 'm²', Math.round(A * 1.1), 130, '', true, 'Fechamento'))
-  if (sobrado) { P.push(AU('Entrepiso (laje seca / wall)', 'm²', footprint, 160, '', true, 'Estrutura')); P.push(CH('Escada', 'un', 1, [T('Concreto revestido', 6000), T('Madeira', 9000), T('Metálica / vidro', 15000)], '', true, 'Estrutura')) }
-  P.push(CH('Cobertura / telhado', 'm²', telhadoArea, [T('Fibrocimento', 60), T('Cerâmico', 110), T('Shingle / metálico', 180)], '', true, 'Cobertura'))
+  P.push(AU('Fechamento (OSB + placa cimentícia + isolamento)', 'm²', Math.round(A * 1.1), 200, '', true, 'Fechamento'))
+  if (sobrado) { P.push(AU('Entrepiso (laje seca / wall)', 'm²', footprint, 208, '', true, 'Estrutura')); P.push(CH('Escada', 'un', 1, [T('Concreto revestido', 6000), T('Madeira', 9000), T('Metálica / vidro', 15000)], '', true, 'Estrutura')) }
+  P.push(CH('Cobertura / telhado', 'm²', telhadoArea, [T('Fibrocimento', 85), T('Cerâmico', 169), T('Shingle / metálico', 215)], '', true, 'Cobertura'))
   P[P.length - 1].sel = tSel
-  P.push(AU('Manta / subcobertura + calhas', 'm²', telhadoArea, 25, '', true, 'Cobertura'))
-  P.push(AU('Entrada de energia + quadro (QDC)', 'vb', 1, 2800, '', true, 'Instalações'))
-  P.push(AU('Instalação hidráulica — barrilete / geral', 'vb', 1, 3200, '', true, 'Instalações'))
+  P.push(AU('Manta / subcobertura + calhas', 'm²', telhadoArea, 33, '', true, 'Cobertura'))
+  P.push(AU('Entrada de energia + quadro (QDC)', 'vb', 1, 3360, '', true, 'Instalações'))
+  P.push(AU('Instalação hidráulica — barrilete / geral', 'vb', 1, 3840, '', true, 'Instalações'))
   P.push(CH('Fachada / pintura externa', 'm²', Math.round(footprint * (sobrado ? 2.4 : 1.6)), [T('Textura', 30), T('Premium', 45), T('Grafiato', 60)], 'Externo', false, 'Fachada'))
-  P.push(AU('Impermeabilização', 'm²', footprint, 35, '', true, 'Fundação'))
+  P.push(AU('Impermeabilização', 'm²', footprint, 104, '', true, 'Fundação'))
   P.push(AU('Limpeza final / entrega', 'vb', 1, 1500, '', true, 'Entrega'))
   FEATURES.forEach((f) => {
     if (!cfg.features[f.key]) return
