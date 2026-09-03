@@ -7,7 +7,6 @@
 //  os valores reais dos fornecedores.
 // =========================================================================
 import { ACABIMG } from './acab_img'
-import { EXTRAIMG as IMG } from './acab_extra_img'
 import { precoVenda, MARGEM_PCT_PADRAO } from './custos'
 
 // coeficiente de consumo por m² de ambiente
@@ -30,10 +29,32 @@ export const PISOS = [
 
 // ---- PAREDES (R$/m² de parede; área de parede ≈ 2,7× a área do piso) ----
 export const PAREDES = [
-  A('par-pintura', 'parede', 'Pintura (massa + acrílica)', 'medio', 12, 1.20, null),
-  A('par-painel-ripado', 'parede', 'Painel ripado (WPC)', 'alto', 150, 0.35, ACABIMG['par-painel-ripado']),
-  A('par-pedra', 'parede', 'Revestimento em pedra natural', 'alto', 90, 0.70, ACABIMG['par-pedra']),
-  A('par-marmore', 'parede', 'Mármore flexível', 'alto', 120, 0.50, ACABIMG['par-marmore']),
+  // médio padrão
+  A('par-pintura-fosca', 'parede', 'Pintura acrílica fosca', 'medio', 10, 1.30, ACABIMG['par-pintura-fosca']),
+  A('par-pintura-acetinada', 'parede', 'Pintura acrílica acetinada', 'medio', 14, 1.20, ACABIMG['par-pintura-acetinada']),
+  A('par-textura-grafiato', 'parede', 'Textura projetada grafiato', 'medio', 22, 0.90, ACABIMG['par-textura-grafiato']),
+  A('par-textura-riscada', 'parede', 'Textura projetada riscada', 'medio', 24, 0.90, ACABIMG['par-textura-riscada']),
+  A('par-revest-3d-gesso', 'parede', 'Revestimento 3D (gesso)', 'medio', 90, 0.50, ACABIMG['par-revest-3d-gesso']),
+  A('par-papel-vinilico', 'parede', 'Papel de parede vinílico', 'medio', 60, 0.40, ACABIMG['par-papel-vinilico']),
+  A('par-cimenticio', 'parede', 'Revestimento cimentício', 'medio', 70, 0.60, ACABIMG['par-cimenticio']),
+  A('par-ceramico', 'parede', 'Revestimento cerâmico', 'medio', 55, 0.70, ACABIMG['par-ceramico']),
+  // alto padrão
+  A('par-pintura-premium', 'parede', 'Pintura acrílica premium', 'alto', 22, 1.10, ACABIMG['par-pintura-premium']),
+  A('par-cimento-queimado', 'parede', 'Efeito cimento queimado', 'alto', 55, 0.80, ACABIMG['par-cimento-queimado']),
+  A('par-microcimento', 'parede', 'Microcimento', 'alto', 120, 0.70, ACABIMG['par-microcimento']),
+  A('par-pedra-natural', 'parede', 'Revestimento em pedra natural', 'alto', 130, 0.70, ACABIMG['par-pedra-natural']),
+  A('par-marmore-natural', 'parede', 'Mármore natural', 'alto', 400, 0.50, ACABIMG['par-marmore-natural']),
+  A('par-painel-ripado', 'parede', 'Painel ripado (madeira / WPC)', 'alto', 150, 0.35, ACABIMG['par-painel-ripado']),
+  A('par-laminado', 'parede', 'Laminado de alto padrão', 'alto', 160, 0.40, ACABIMG['par-laminado']),
+  A('par-metalico', 'parede', 'Revestimento metálico', 'alto', 220, 0.40, ACABIMG['par-metalico']),
+  A('par-onix', 'parede', 'Ônix natural retroiluminado', 'alto', 600, 0.50, ACABIMG['par-onix']),
+  A('par-quartzito', 'parede', 'Quartzito natural', 'alto', 350, 0.50, ACABIMG['par-quartzito']),
+  A('par-travertino', 'parede', 'Travertino natural', 'alto', 300, 0.50, ACABIMG['par-travertino']),
+  A('par-tijolo', 'parede', 'Revestimento em tijolo aparente', 'alto', 90, 0.70, ACABIMG['par-tijolo']),
+  A('par-painel-3d', 'parede', 'Painel 3D alto padrão', 'alto', 120, 0.50, ACABIMG['par-painel-3d']),
+  A('par-papel-importado', 'parede', 'Papel de parede importado', 'alto', 140, 0.40, ACABIMG['par-papel-importado']),
+  A('par-vidro-lacobel', 'parede', 'Vidro Lacobel', 'alto', 260, 0.35, ACABIMG['par-vidro-lacobel']),
+  A('par-espelho-bronze', 'parede', 'Espelho bronze / fumê', 'alto', 300, 0.35, ACABIMG['par-espelho-bronze']),
 ]
 
 // ---- TETO / FORRO (R$/m²) ----
@@ -77,8 +98,8 @@ export const areaTelhado = (areaTotal, sobrado) => Math.round((sobrado ? areaTot
 
 // ---- PAISAGISMO (venda fixa) ----
 export const PAISAGISMOS = [
-  { id: 'pais-entrada', nome: 'Jardim de entrada (até 9 m²)', venda: 8000, img: IMG['pais-jardim-tropical'] },
-  { id: 'pais-completo', nome: 'Paisagismo completo (até 18 m²)', venda: 18000, img: IMG['pais-composicao-terrea'] },
+  { id: 'pais-entrada', nome: 'Jardim de entrada (até 9 m²)', venda: 8000, img: ACABIMG['pais-entrada'] },
+  { id: 'pais-completo', nome: 'Paisagismo completo (até 18 m²)', venda: 18000, img: ACABIMG['pais-completo'] },
 ]
 export const PAISAGISMOS_POR_ID = {}
 PAISAGISMOS.forEach((p) => { PAISAGISMOS_POR_ID[p.id] = p })
