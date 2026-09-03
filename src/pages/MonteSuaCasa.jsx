@@ -186,7 +186,6 @@ export default function MonteSuaCasa() {
                   ) })}
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <b className="mono" style={{ fontSize: 13 }}>{brl(custoAmbiente(amb))}</b>
                   <button type="button" onClick={() => editar(idx)} className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }}>✎ editar</button>
                   <button type="button" onClick={() => addAmbiente({ tipo: amb.tipo, area: amb.area })} title={'Adicionar outro ' + amb.tipo} style={{ border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ outro {amb.tipo.toLowerCase()}</button>
                   <button type="button" onClick={() => removeAmb(idx)} className="muted" style={{ fontSize: 17, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
@@ -225,8 +224,7 @@ export default function MonteSuaCasa() {
                     )
                   })}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, gap: 10, flexWrap: 'wrap' }}>
-                  <span className="muted" style={{ fontSize: 12.5 }}>Subtotal do ambiente: <b style={{ color: 'var(--ink)' }}>{brl(custoAmbiente(amb))}</b></span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 12 }}>
                   <button type="button" className="btn" onClick={() => concluir(idx)} style={{ padding: '9px 20px', fontSize: 14 }}>✓ Concluir ambiente</button>
                 </div>
               </div>
@@ -271,7 +269,7 @@ export default function MonteSuaCasa() {
               return (
                 <button key={p.id} type="button" onClick={() => setPaisagismo(p.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
                   <div style={{ aspectRatio: '4/3', background: '#eef2f5' }}>{p.img && <img src={p.img} alt={p.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
-                  <div style={{ padding: '8px 10px' }}><div style={{ fontSize: 12.5, fontWeight: 700 }}>{p.nome}</div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{brl(p.venda)}</div></div>
+                  <div style={{ padding: '8px 10px' }}><div style={{ fontSize: 12.5, fontWeight: 700 }}>{p.nome}</div><div className="muted" style={{ fontSize: 11 }}>opcional</div></div>
                 </button>
               )
             })}
@@ -328,8 +326,7 @@ export default function MonteSuaCasa() {
                       </div>
                       <div style={{ padding: '9px 11px' }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{it.nome}</div>
-                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{it.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'} · {un}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginTop: 4 }}>{brl(custoSuperficie(picker.superficie, it, amb.area))}</div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{it.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'}</div>
                       </div>
                     </button>
                   )

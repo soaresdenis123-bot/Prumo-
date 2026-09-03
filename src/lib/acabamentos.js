@@ -31,7 +31,6 @@ export const PISOS = [
 // ---- PAREDES (R$/m² de parede; área de parede ≈ 2,7× a área do piso) ----
 export const PAREDES = [
   A('par-pintura', 'parede', 'Pintura (massa + acrílica)', 'medio', 12, 1.20, null),
-  A('par-porcelanato', 'parede', 'Porcelanato de parede', 'medio', 85, 0.60, ACABIMG['piso-porcelanato-polido']),
   A('par-painel-ripado', 'parede', 'Painel ripado (WPC)', 'alto', 150, 0.35, ACABIMG['par-painel-ripado']),
   A('par-pedra', 'parede', 'Revestimento em pedra natural', 'alto', 90, 0.70, ACABIMG['par-pedra']),
   A('par-marmore', 'parede', 'Mármore flexível', 'alto', 120, 0.50, ACABIMG['par-marmore']),
