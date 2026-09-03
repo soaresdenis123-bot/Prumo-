@@ -32,17 +32,17 @@ export const PISOS = [
 export const PAREDES = [
   A('par-pintura', 'parede', 'Pintura (massa + acrílica)', 'medio', 12, 1.20, null),
   A('par-porcelanato', 'parede', 'Porcelanato de parede', 'medio', 85, 0.60, ACABIMG['piso-porcelanato-polido']),
-  A('par-painel-ripado', 'parede', 'Painel ripado (WPC)', 'alto', 150, 0.35, IMG['painel-ripado-interno']),
-  A('par-pedra', 'parede', 'Revestimento em pedra natural', 'alto', 90, 0.70, IMG['revestimento-pedra-flexivel']),
-  A('par-marmore', 'parede', 'Mármore flexível', 'alto', 120, 0.50, IMG['marmore-flexivel']),
+  A('par-painel-ripado', 'parede', 'Painel ripado (WPC)', 'alto', 150, 0.35, ACABIMG['par-painel-ripado']),
+  A('par-pedra', 'parede', 'Revestimento em pedra natural', 'alto', 90, 0.70, ACABIMG['par-pedra']),
+  A('par-marmore', 'parede', 'Mármore flexível', 'alto', 120, 0.50, ACABIMG['par-marmore']),
 ]
 
 // ---- TETO / FORRO (R$/m²) ----
 export const TETOS = [
   A('teto-gesso', 'teto', 'Forro de gesso liso', 'medio', 55, 0.60, null),
   A('teto-gesso-sanca', 'teto', 'Gesso + sanca + LED', 'alto', 90, 0.60, null),
-  A('teto-forro-pvc', 'teto', 'Forro PVC premium', 'medio', 38, 0.80, IMG['forro-pvc-premium']),
-  A('teto-forro-wpc', 'teto', 'Forro WPC', 'alto', 90, 0.50, IMG['forro-wpc']),
+  A('teto-forro-pvc', 'teto', 'Forro PVC premium', 'medio', 38, 0.80, ACABIMG['teto-forro-pvc']),
+  A('teto-forro-wpc', 'teto', 'Forro WPC', 'alto', 90, 0.50, ACABIMG['teto-forro-wpc']),
 ]
 
 // ---- ESQUADRIAS (R$/unidade; nº de unidades estimado pela área) ----
