@@ -32,11 +32,13 @@ export default function MonteSuaCasa() {
 
   // ---- ambientes ----
   function addAmbiente(base) {
-    setAmbientes((a) => [...a, { id: AMBID++, tipo: base.tipo, area: base.area, sel: {} }])
+    setAmbientes((a) => [...a, { id: AMBID++, tipo: base.tipo, area: base.area, sel: {}, done: false }])
   }
   const updAmb = (idx, fn) => setAmbientes((a) => a.map((x, i) => (i === idx ? fn(x) : x)))
   const setArea = (idx, v) => updAmb(idx, (x) => ({ ...x, area: Math.max(1, v) }))
   const removeAmb = (idx) => setAmbientes((a) => a.filter((_, i) => i !== idx))
+  const concluir = (idx) => updAmb(idx, (x) => ({ ...x, done: true }))
+  const editar = (idx) => updAmb(idx, (x) => ({ ...x, done: false }))
   const escolher = (id) => { updAmb(picker.idx, (x) => ({ ...x, sel: { ...x.sel, [picker.superficie]: id } })); setPicker(null) }
 
   const custoAmbiente = (amb) => SUPERFICIES.reduce((t, s) => t + custoSuperficie(s.key, ACAB_POR_ID[amb.sel[s.key]], amb.area), 0)
@@ -167,18 +169,32 @@ export default function MonteSuaCasa() {
         {/* AMBIENTES */}
         <div className="card" style={{ padding: 20, marginTop: 24 }}>
           <div className="sec-title" style={{ marginTop: 0 }}>Monte os ambientes da sua casa</div>
-          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 14px' }}>Adicione cada cômodo, ajuste o tamanho e escolha piso, paredes, teto e esquadrias vendo as imagens. O valor se ajusta na hora.</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: ambientes.length ? 18 : 0 }}>
-            {AMBIENTES_BASE.map((b) => (
-              <button key={b.tipo} type="button" onClick={() => addAmbiente(b)} style={{ border: '1px dashed var(--line)', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'transparent', color: 'var(--ink2,#555)' }}>+ {b.tipo}</button>
-            ))}
-          </div>
+          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 14px' }}>Adicione cada cômodo, ajuste o tamanho e escolha piso, paredes, teto e esquadrias vendo as imagens. Ao terminar, clique em Concluir.</div>
 
-          {ambientes.length === 0 && <div className="muted" style={{ fontSize: 13 }}>Comece adicionando um ambiente acima (ex.: Quarto, Cozinha, Sala…).</div>}
+          {ambientes.length === 0 && <div className="muted" style={{ fontSize: 13, marginBottom: 14 }}>Comece adicionando um ambiente abaixo (ex.: Quarto, Cozinha, Sala…).</div>}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {ambientes.map((amb, idx) => (
-              <div key={amb.id} style={{ border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+            {ambientes.map((amb, idx) => amb.done ? (
+              /* ---- card compacto (ambiente concluído) ---- */
+              <div key={amb.id} style={{ border: '1px solid var(--line)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                <div style={{ fontWeight: 700, fontSize: 14.5, minWidth: 120 }}><span style={{ color: 'var(--ok,#55604A)' }}>✓</span> {amb.tipo} <span className="muted" style={{ fontWeight: 400 }}>· {amb.area} m²</span></div>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {SUPERFICIES.map((s) => { const it = ACAB_POR_ID[amb.sel[s.key]]; return (
+                    <div key={s.key} title={s.label + (it ? ': ' + it.nome : '')} style={{ width: 34, height: 34, borderRadius: 7, overflow: 'hidden', background: '#f0ece4', border: '1px solid var(--line)' }}>
+                      {it?.img && <img src={it.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                    </div>
+                  ) })}
+                </div>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <b className="mono" style={{ fontSize: 13 }}>{brl(custoAmbiente(amb))}</b>
+                  <button type="button" onClick={() => editar(idx)} className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }}>✎ editar</button>
+                  <button type="button" onClick={() => addAmbiente({ tipo: amb.tipo, area: amb.area })} title={'Adicionar outro ' + amb.tipo} style={{ border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ outro {amb.tipo.toLowerCase()}</button>
+                  <button type="button" onClick={() => removeAmb(idx)} className="muted" style={{ fontSize: 17, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
+                </div>
+              </div>
+            ) : (
+              /* ---- card em edição ---- */
+              <div key={amb.id} style={{ border: '2px solid var(--accent)', borderRadius: 14, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{amb.tipo}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -209,9 +225,22 @@ export default function MonteSuaCasa() {
                     )
                   })}
                 </div>
-                <div style={{ textAlign: 'right', marginTop: 8, fontSize: 12.5 }} className="muted">Subtotal do ambiente: <b style={{ color: 'var(--ink)' }}>{brl(custoAmbiente(amb))}</b></div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, gap: 10, flexWrap: 'wrap' }}>
+                  <span className="muted" style={{ fontSize: 12.5 }}>Subtotal do ambiente: <b style={{ color: 'var(--ink)' }}>{brl(custoAmbiente(amb))}</b></span>
+                  <button type="button" className="btn" onClick={() => concluir(idx)} style={{ padding: '9px 20px', fontSize: 14 }}>✓ Concluir ambiente</button>
+                </div>
               </div>
             ))}
+          </div>
+
+          {/* adicionar próximo ambiente */}
+          <div style={{ marginTop: ambientes.length ? 18 : 0, borderTop: ambientes.length ? '1px solid var(--line)' : 'none', paddingTop: ambientes.length ? 16 : 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Adicionar {ambientes.length ? 'próximo ' : ''}ambiente</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {AMBIENTES_BASE.map((b) => (
+                <button key={b.tipo} type="button" onClick={() => addAmbiente(b)} style={{ border: '1px dashed var(--line)', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'transparent', color: 'var(--ink2,#555)' }}>+ {b.tipo}</button>
+              ))}
+            </div>
           </div>
         </div>
 
