@@ -1,120 +1,106 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { salvarLeadProjeto } from '../lib/data'
 import { MODELOS } from '../lib/modelos'
-import { estimativa, brl } from '../lib/precificacao'
+import { SUPERFICIES, AMBIENTES_BASE, ACAB_POR_ID, custoSuperficie, vendaItem, esquadUnidades,
+  TELHADOS_POR_ID, telhadosDisponiveis, areaTelhado, PAISAGISMOS, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
+import { brl } from '../lib/precificacao'
 import PlumbMark from '../components/PlumbMark'
 
-// Access Key gratuita do web3forms.com — cole aqui para receber cada lead por e-mail
-// (o e-mail de destino, adm@msconstrucoesinteligentes.com.br, é configurado na conta web3forms).
 const EMAIL_KEY = '7deb7e3c-19dd-4aeb-a043-12d7bfca6b17'
-// telhado só de platibanda: cobertura escondida, apenas fibrocimento ou metálica
-const TELHADO_PLATIBANDA = ['Fibrocimento', 'Telha metálica (galvalume)']
-// paisagismo (do projeto Ana Carvalho — jardim tropical contemporâneo, sem preços)
-const OPT_PAIS = [
-  'Jardim de entrada · até 9 m² (destaque com palmeira, forrações e iluminação)',
-  'Paisagismo completo · até 18 m² (jardim tropical contemporâneo, canteiros, pedras e iluminação)',
-]
-
-/* =========================================================================
- *  MONTE SUA CASA — página pública de captação (sem login, sem custos)
- *  O cliente filtra, escolhe um modelo e deixa o contato. Salva em
- *  leads_projeto (RPC pública). A equipe vê depois no Prumo.
- *
- *  >> Fotos: cada modelo aponta para /modelos/mXX.jpg (pasta public/modelos).
- *     Para trocar/adicionar, é só substituir o arquivo ou editar MODELOS.
- * ======================================================================= */
 const TELHADO_LABEL = { aparente: 'Telhado aparente', platibanda: 'Platibanda' }
-const COMODOS = ['Quartos', 'Suítes', 'Banheiros', 'Lavabo', 'Cozinha', 'Sala de estar', 'Sala de jantar', 'Garagem (vagas)', 'Área de serviço', 'Escritório', 'Varanda']
-const EXTRAS = ['Piscina', 'Área gourmet / churrasqueira', 'Lareira']
-
-// Acabamentos principais que o cliente escolhe (opções de médio e alto padrão)
-const OPT_PISO = {
-  medio: ['Porcelanato acetinado 60×60', 'Porcelanato polido 60×60', 'Piso vinílico / laminado SPC', 'Cerâmica premium'],
-  alto: ['Porcelanato retificado grande formato (90×90 / 120×120)', 'Porcelanato marmorizado polido', 'Porcelanato importado', 'Madeira engenheirada / vinílico premium'],
-}
-const OPT_TELHADO = {
-  medio: ['Telha de concreto', 'Telha cerâmica', 'Telha metálica (galvalume)', 'Fibrocimento com forro'],
-  alto: ['Telha cerâmica esmaltada', 'Telha shingle', 'Laje impermeabilizada / telhado embutido', 'Telha termoacústica (sanduíche)'],
-}
-const OPT_ESQ = {
-  medio: ['Alumínio linha branca', 'PVC', 'Alumínio anodizado'],
-  alto: ['Alumínio premium (preto / amadeirado)', 'PVC alto desempenho', 'Vidro duplo acústico/térmico', 'Vidro de correr amplo / sistema minimal'],
-}
-const ACAB = [['piso', 'Piso', OPT_PISO], ['telhado', 'Telhado (cobertura)', OPT_TELHADO], ['esquadrias', 'Esquadrias (janelas e portas)', OPT_ESQ]]
+// custo estrutural (fundação + estrutura steel frame + fechamento + instalações), R$/m². Cobertura entra à parte (escolha).
+const BASE_ESTRUTURAL = 1600
+const SERVICOS_M2 = 225 // projetos (arquitetura, estrutural, fundação, aprovação)
 const inp = { width: '100%', padding: '11px 13px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--surface,#fff)', color: 'var(--ink)', fontSize: 14 }
+let AMBID = 1
 
 export default function MonteSuaCasa() {
   const [tipo, setTipo] = useState('terrea')
   const [telhado, setTelhado] = useState('todos')
   const [sel, setSel] = useState(null)
-  const [area, setArea] = useState('')
-  const [comodos, setComodos] = useState({})
-  const [extras, setExtras] = useState({})
-  const [acab, setAcab] = useState({ piso: '', telhado: '', esquadrias: '', paisagismo: '' })
+  const [ambientes, setAmbientes] = useState([])
+  const [cobertura, setCobertura] = useState(null) // id do telhado
+  const [paisagismo, setPaisagismo] = useState(null) // id do paisagismo
+  const [picker, setPicker] = useState(null) // { idx, superficie }
   const [form, setForm] = useState({ nome: '', contato: '', cidade: '', obs: '' })
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
 
-  const lista = useMemo(
-    () => MODELOS.filter((m) => m.tipo === tipo && (telhado === 'todos' || m.telhado === telhado)),
-    [tipo, telhado]
-  )
-  const padraoTipo = tipo === 'sobrado' ? 'alto padrão' : 'médio padrão'
-  const setComodo = (c, v) => setComodos({ ...comodos, [c]: Math.max(0, v) })
+  const padrao = (sel?.padrao === 'alto' || sel?.padrao === 'medio') ? sel.padrao : (tipo === 'sobrado' ? 'alto' : 'medio')
+  const lista = useMemo(() => MODELOS.filter((m) => m.tipo === tipo && (telhado === 'todos' || m.telhado === telhado)), [tipo, telhado])
 
-  // estimativa de investimento (faixa) — escala com área, cômodos, extras e paisagismo
+  // ---- ambientes ----
+  function addAmbiente(base) {
+    setAmbientes((a) => [...a, { id: AMBID++, tipo: base.tipo, area: base.area, sel: {} }])
+  }
+  const updAmb = (idx, fn) => setAmbientes((a) => a.map((x, i) => (i === idx ? fn(x) : x)))
+  const setArea = (idx, v) => updAmb(idx, (x) => ({ ...x, area: Math.max(1, v) }))
+  const removeAmb = (idx) => setAmbientes((a) => a.filter((_, i) => i !== idx))
+  const escolher = (id) => { updAmb(picker.idx, (x) => ({ ...x, sel: { ...x.sel, [picker.superficie]: id } })); setPicker(null) }
+
+  const custoAmbiente = (amb) => SUPERFICIES.reduce((t, s) => t + custoSuperficie(s.key, ACAB_POR_ID[amb.sel[s.key]], amb.area), 0)
+
+  // cobertura disponível depende do modelo (platibanda restringe)
+  const platibanda = sel ? sel.telhado === 'platibanda' : false
+  const telhadoOpts = useMemo(() => telhadosDisponiveis(platibanda), [platibanda])
+  const cobItem = (cobertura && telhadoOpts.find((t) => t.id === cobertura)) || telhadoOpts[0]
+
+  // ---- estimativa ----
   const est = useMemo(() => {
-    const padrao = (sel?.padrao === 'alto' || sel?.padrao === 'medio') ? sel.padrao : (tipo === 'sobrado' ? 'alto' : 'medio')
-    return estimativa({ area, tipo, padrao, comodos, extras, paisagismo: acab.paisagismo })
-  }, [sel, tipo, area, comodos, extras, acab.paisagismo])
+    const areaTotal = ambientes.reduce((t, a) => t + (Number(a.area) || 0), 0)
+    const acab = ambientes.reduce((t, a) => t + custoAmbiente(a), 0)
+    const sobrado = (sel?.tipo === 'sobrado') || tipo === 'sobrado'
+    const telArea = areaTelhado(areaTotal, sobrado)
+    const cobCusto = cobItem ? telArea * vendaItem(cobItem) : 0
+    const paisCusto = paisagismo ? (PAISAGISMOS_POR_ID[paisagismo]?.venda || 0) : 0
+    const base = areaTotal * BASE_ESTRUTURAL + areaTotal * SERVICOS_M2 + acab + cobCusto + paisCusto
+    const round = (n) => Math.round(n / 1000) * 1000
+    return { areaTotal, acab, cobCusto, paisCusto, total: base, min: round(base * 0.94), max: round(base * 1.1) }
+  }, [ambientes, cobertura, paisagismo, sel, tipo, cobItem])
 
-  // platibanda = cobertura escondida → só fibrocimento ou metálica
-  const platibanda = sel ? sel.telhado === 'platibanda' : telhado === 'platibanda'
-  const optTelhado = platibanda ? { medio: TELHADO_PLATIBANDA, alto: [] } : OPT_TELHADO
-  // se virar platibanda e a cobertura escolhida não for permitida, limpa
-  useEffect(() => {
-    if (platibanda && acab.telhado && !TELHADO_PLATIBANDA.includes(acab.telhado)) setAcab((a) => ({ ...a, telhado: '' }))
-  }, [platibanda]) // eslint-disable-line
-
-  // monta o texto do programa da casa (cômodos + extras) pra salvar no lead
-  function programaTexto() {
-    const partes = []
-    partes.push(`~${est.area} m²`) // sempre grava a área efetiva (informada ou estimada pelos cômodos)
-    COMODOS.forEach((c) => { const n = Number(comodos[c]) || 0; if (n > 0) partes.push(`${n} ${c.toLowerCase()}`) })
-    const ex = EXTRAS.filter((e) => extras[e])
-    if (ex.length) partes.push('extras: ' + ex.join(', ').toLowerCase())
-    if (acab.piso) partes.push('Piso: ' + acab.piso)
-    if (acab.telhado) partes.push('Telhado: ' + acab.telhado)
-    if (acab.esquadrias) partes.push('Esquadrias: ' + acab.esquadrias)
-    if (acab.paisagismo) partes.push('Paisagismo: ' + acab.paisagismo)
-    return partes.join(' · ')
+  function selecoesResumo() {
+    // texto legível + bloco JSON para o admin reconstruir
+    const linhas = ambientes.map((a) => {
+      const parts = SUPERFICIES.filter((s) => a.sel[s.key]).map((s) => `${s.label}: ${ACAB_POR_ID[a.sel[s.key]].nome}`)
+      return `${a.tipo} (${a.area} m²)` + (parts.length ? ' · ' + parts.join(' · ') : '')
+    })
+    const extras = []
+    if (cobItem) extras.push('Cobertura: ' + cobItem.nome)
+    if (paisagismo) extras.push('Paisagismo: ' + (PAISAGISMOS_POR_ID[paisagismo]?.nome || ''))
+    const json = JSON.stringify({
+      modelo: sel?.nome || '', tipo, padrao, telhado: sel?.telhado || '',
+      cobertura: cobItem?.id || '', paisagismo: paisagismo || '',
+      areaTotal: est.areaTotal, estMin: est.min, estMax: est.max,
+      ambientes: ambientes.map((a) => ({ tipo: a.tipo, area: a.area, sel: a.sel })),
+    })
+    return { texto: [...linhas, ...extras].join(' | '), json }
   }
 
-  // avisa por e-mail (opcional; ativa quando EMAIL_KEY estiver preenchido)
-  async function notificarEmail(lead) {
+  async function notificar(lead) {
     if (!EMAIL_KEY) return
     try {
       await fetch('https://api.web3forms.com/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ access_key: EMAIL_KEY, subject: 'Novo lead — Monte sua casa', from_name: 'Site MS',
-          Nome: lead.nome, Contato: lead.contato, Cidade: lead.cidade, Modelo: lead.modelo, Detalhes: lead.obs }),
+        body: JSON.stringify({ access_key: EMAIL_KEY, subject: 'Novo lead — Monte sua casa', from_name: 'Site MS', Nome: lead.nome, Contato: lead.contato, Cidade: lead.cidade, Modelo: lead.modelo, Detalhes: lead.obs }),
       })
-    } catch (e) { /* não bloqueia o envio */ }
+    } catch (e) {}
   }
 
   async function enviar() {
     if (!form.nome || !form.contato) { setErro('Preencha seu nome e um contato (WhatsApp ou e-mail).'); return }
     setSalvando(true); setErro('')
-    const prog = programaTexto()
-    const estTxt = `Estimativa: De ${brl(est.min)} a ${brl(est.max)} (a depender dos materiais de acabamentos e revestimentos)`
-    const obsFinal = [prog && 'Programa: ' + prog, estTxt, form.obs && 'Obs: ' + form.obs].filter(Boolean).join(' · ')
-    const payload = { ...form, obs: obsFinal, tipo, padrao: sel?.padrao || padraoTipo, telhado: sel?.telhado || '', modelo: sel ? sel.nome : '' }
-    try {
-      await salvarLeadProjeto(payload)
-      notificarEmail(payload)
-      setEnviado(true)
-    } catch (e) { setErro('Não deu pra enviar agora. Tente de novo ou fale com a gente no WhatsApp.') }
+    const r = selecoesResumo()
+    const obsFinal = [
+      `~${est.areaTotal} m² · ${ambientes.length} ambientes`,
+      r.texto && 'Ambientes: ' + r.texto,
+      `Estimativa: De ${brl(est.min)} a ${brl(est.max)} (a depender dos materiais)`,
+      form.obs && 'Obs: ' + form.obs,
+      '[[SEL]]' + r.json + '[[/SEL]]',
+    ].filter(Boolean).join(' · ')
+    const payload = { ...form, obs: obsFinal, tipo, padrao, telhado: sel?.telhado || '', modelo: sel ? sel.nome : '' }
+    try { await salvarLeadProjeto(payload); notificar(payload); setEnviado(true) }
+    catch (e) { setErro('Não deu pra enviar agora. Tente de novo ou fale com a gente no WhatsApp.') }
     setSalvando(false)
   }
 
@@ -133,9 +119,7 @@ export default function MonteSuaCasa() {
       <div className="content" style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center', paddingTop: 60 }}>
         <div style={{ fontSize: 46 }}>🏡</div>
         <h1 className="pg" style={{ marginTop: 8 }}>Recebemos o seu sonho, {form.nome.split(' ')[0]}.</h1>
-        <p className="pg-sub" style={{ maxWidth: 470, margin: '10px auto 0' }}>
-          A equipe da MS vai te chamar para a reunião de diagnóstico e começar a dar forma à sua casa. Fique de olho no seu contato.
-        </p>
+        <p className="pg-sub" style={{ maxWidth: 470, margin: '10px auto 0' }}>A equipe da MS vai te chamar para a reunião de diagnóstico com a sua casa já esboçada. Fique de olho no seu contato.</p>
         <a className="btn" style={{ marginTop: 26, display: 'inline-flex' }} href="https://msconstrucoesinteligentes.com.br" target="_blank" rel="noopener">Conhecer a MS</a>
       </div>
     </>
@@ -147,26 +131,21 @@ export default function MonteSuaCasa() {
         <div className="pg-head" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 700 }}>Monte sua casa</div>
           <h1 className="pg" style={{ marginTop: 6 }}>Qual dessas é a sua casa?</h1>
-          <div className="pg-sub" style={{ maxWidth: 580, margin: '8px auto 0' }}>
-            Escolha o modelo que mais parece com o que você sonha. É só um ponto de partida, a gente desenha a sua do zero, do seu jeito.
-          </div>
+          <div className="pg-sub" style={{ maxWidth: 580, margin: '8px auto 0' }}>Escolha o modelo mais parecido com o que você sonha. Depois monte os ambientes e os acabamentos, vendo cada material.</div>
         </div>
 
-        {/* filtros */}
+        {/* filtros + galeria */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, margin: '18px 0 6px' }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <button style={pill(tipo === 'terrea')} onClick={() => { setTipo('terrea'); setSel(null); setTelhado('todos') }}>Casa térrea</button>
             <button style={pill(tipo === 'sobrado')} onClick={() => { setTipo('sobrado'); setSel(null); setTelhado('todos') }}>2 pavimentos</button>
           </div>
-          <div className="muted" style={{ fontSize: 12 }}>{tipo === 'terrea' ? 'Casa térrea · médio padrão' : '2 pavimentos · alto padrão'}</div>
           <div style={{ display: 'flex', gap: 7, marginTop: 2 }}>
             {[['todos', 'Todos'], ['aparente', 'Telhado aparente'], ['platibanda', 'Platibanda']].map(([k, l]) => (
               <button key={k} style={chip(telhado === k)} onClick={() => setTelhado(k)}>{l}</button>
             ))}
           </div>
         </div>
-
-        {/* galeria */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16, marginTop: 14 }}>
           {lista.map((m) => {
             const on = sel?.id === m.id
@@ -185,102 +164,152 @@ export default function MonteSuaCasa() {
           })}
         </div>
 
-        {/* programa da casa — o que o cliente quer ter */}
+        {/* AMBIENTES */}
         <div className="card" style={{ padding: 20, marginTop: 24 }}>
-          <div className="sec-title" style={{ marginTop: 0 }}>O que a sua casa vai ter?</div>
-          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 14px' }}>Monte o programa da sua casa. Some os cômodos que você quer, é o ponto de partida pro projeto.</div>
-          <div className="field" style={{ maxWidth: 220, marginBottom: 14 }}>
-            <label>Área desejada (m²) · opcional</label>
-            <input style={inp} type="number" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Ex.: 180" />
+          <div className="sec-title" style={{ marginTop: 0 }}>Monte os ambientes da sua casa</div>
+          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 14px' }}>Adicione cada cômodo, ajuste o tamanho e escolha piso, paredes, teto e esquadrias vendo as imagens. O valor se ajusta na hora.</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: ambientes.length ? 18 : 0 }}>
+            {AMBIENTES_BASE.map((b) => (
+              <button key={b.tipo} type="button" onClick={() => addAmbiente(b)} style={{ border: '1px dashed var(--line)', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'transparent', color: 'var(--ink2,#555)' }}>+ {b.tipo}</button>
+            ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 10 }}>
-            {COMODOS.map((c) => (
-              <div key={c} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 12px' }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{c}</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button type="button" onClick={() => setComodo(c, (Number(comodos[c]) || 0) - 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>−</button>
-                  <b style={{ minWidth: 14, textAlign: 'center', fontFamily: 'monospace' }}>{Number(comodos[c]) || 0}</b>
-                  <button type="button" onClick={() => setComodo(c, (Number(comodos[c]) || 0) + 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>+</button>
-                </span>
+
+          {ambientes.length === 0 && <div className="muted" style={{ fontSize: 13 }}>Comece adicionando um ambiente acima (ex.: Quarto, Cozinha, Sala…).</div>}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {ambientes.map((amb, idx) => (
+              <div key={amb.id} style={{ border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{amb.tipo}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="muted" style={{ fontSize: 12.5 }}>Tamanho</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button type="button" onClick={() => setArea(idx, amb.area - 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>−</button>
+                      <b className="mono" style={{ minWidth: 42, textAlign: 'center' }}>{amb.area} m²</b>
+                      <button type="button" onClick={() => setArea(idx, amb.area + 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>+</button>
+                    </span>
+                    <button type="button" onClick={() => removeAmb(idx)} className="muted" style={{ fontSize: 17, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginTop: 12 }}>
+                  {SUPERFICIES.map((s) => {
+                    const chosen = ACAB_POR_ID[amb.sel[s.key]]
+                    return (
+                      <button key={s.key} type="button" onClick={() => setPicker({ idx, superficie: s.key })} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: chosen ? '2px solid var(--accent)' : '1px dashed var(--line)' }}>
+                        <div style={{ aspectRatio: '4/3', background: '#f0ece4', position: 'relative', display: 'grid', placeItems: 'center' }}>
+                          {chosen?.img ? <img src={chosen.img} alt={chosen.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : chosen ? <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink2)', padding: 8, textAlign: 'center' }}>{chosen.nome}</span>
+                              : <span className="muted" style={{ fontSize: 22 }}>+</span>}
+                        </div>
+                        <div style={{ padding: '7px 9px' }}>
+                          <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ink3)', fontWeight: 700 }}>{s.label}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, marginTop: 1, lineHeight: 1.15 }}>{chosen ? chosen.nome : 'Escolher'}</div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ textAlign: 'right', marginTop: 8, fontSize: 12.5 }} className="muted">Subtotal do ambiente: <b style={{ color: 'var(--ink)' }}>{brl(custoAmbiente(amb))}</b></div>
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', marginTop: 14 }}>
-            {EXTRAS.map((e) => {
-              const on = !!extras[e]
+        </div>
+
+        {/* COBERTURA & EXTERNOS */}
+        <div className="card" style={{ padding: 20, marginTop: 16 }}>
+          <div className="sec-title" style={{ marginTop: 0 }}>Cobertura da casa</div>
+          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 12px' }}>{platibanda ? 'Modelo com platibanda: cobertura escondida em fibrocimento ou metálica.' : 'Escolha o telhado. O valor considera a área de cobertura da sua casa.'}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 12 }}>
+            {telhadoOpts.map((t) => {
+              const on = cobItem?.id === t.id
               return (
-                <button key={e} type="button" onClick={() => setExtras({ ...extras, [e]: !on })} style={{ border: '1px solid var(--line)', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--ink2,#555)' }}>
-                  {on ? '✓ ' : '+ '}{e}
+                <button key={t.id} type="button" onClick={() => setCobertura(t.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+                  <div style={{ aspectRatio: '4/3', background: '#eef2f5' }}>{t.img && <img src={t.img} alt={t.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
+                  <div style={{ padding: '8px 10px' }}><div style={{ fontSize: 12.5, fontWeight: 700 }}>{t.nome}</div><div className="muted" style={{ fontSize: 11 }}>{t.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'}</div></div>
                 </button>
               )
             })}
           </div>
 
-          <div style={{ borderTop: '1px solid var(--line)', margin: '18px 0 4px', paddingTop: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Acabamentos principais</div>
-              <a href="/acabamentos" target="_blank" rel="noopener" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>Ver portfólio completo de acabamentos →</a>
-            </div>
-            <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Escolha o padrão de piso, cobertura e esquadrias. Pode misturar médio e alto, do seu jeito.</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
-              {ACAB.map(([k, label, baseOpts]) => {
-                const opts = k === 'telhado' ? optTelhado : baseOpts
-                return (
-                  <div className="field" key={k}>
-                    <label>{label}</label>
-                    <select style={inp} value={acab[k]} onChange={(e) => setAcab({ ...acab, [k]: e.target.value })}>
-                      <option value="">Selecione…</option>
-                      {opts.medio.length > 0 && <optgroup label={k === 'telhado' && platibanda ? 'Para platibanda' : 'Médio padrão'}>{opts.medio.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>}
-                      {opts.alto.length > 0 && <optgroup label="Alto padrão">{opts.alto.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>}
-                    </select>
-                    {k === 'telhado' && platibanda && <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Platibanda esconde o telhado: cobertura em fibrocimento ou metálica.</div>}
-                  </div>
-                )
-              })}
-              <div className="field">
-                <label>Paisagismo <span className="muted" style={{ fontWeight: 400 }}>· opcional</span></label>
-                <select style={inp} value={acab.paisagismo} onChange={(e) => setAcab({ ...acab, paisagismo: e.target.value })}>
-                  <option value="">Sem paisagismo por enquanto</option>
-                  {OPT_PAIS.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-            </div>
+          <div style={{ fontWeight: 700, fontSize: 14, margin: '18px 0 4px' }}>Paisagismo <span className="muted" style={{ fontWeight: 400, fontSize: 12.5 }}>· opcional</span></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 12 }}>
+            <button type="button" onClick={() => setPaisagismo(null)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: !paisagismo ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+              <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}><span className="muted" style={{ fontSize: 12 }}>Sem paisagismo</span></div>
+              <div style={{ padding: '8px 10px' }}><div style={{ fontSize: 12.5, fontWeight: 700 }}>Sem paisagismo</div><div className="muted" style={{ fontSize: 11 }}>por enquanto</div></div>
+            </button>
+            {PAISAGISMOS.map((p) => {
+              const on = paisagismo === p.id
+              return (
+                <button key={p.id} type="button" onClick={() => setPaisagismo(p.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+                  <div style={{ aspectRatio: '4/3', background: '#eef2f5' }}>{p.img && <img src={p.img} alt={p.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
+                  <div style={{ padding: '8px 10px' }}><div style={{ fontSize: 12.5, fontWeight: 700 }}>{p.nome}</div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{brl(p.venda)}</div></div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* estimativa de investimento (faixa) — objetivo, sem detalhamento */}
+        {/* ESTIMATIVA */}
         <div className="card" style={{ padding: 20, marginTop: 16, background: 'var(--ink)', color: 'var(--bg,#fff)', border: 'none' }}>
           <div style={{ fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase', opacity: .7, fontWeight: 700 }}>Estimativa de investimento</div>
-          <div style={{ fontSize: 'clamp(24px,5vw,34px)', fontWeight: 800, letterSpacing: '-.5px', marginTop: 6 }}>
-            De {brl(est.min)} <span style={{ opacity: .55, fontWeight: 500 }}>a</span> {brl(est.max)}
-          </div>
-          <div style={{ fontSize: 12.5, opacity: .78, marginTop: 8, maxWidth: 560 }}>
-            Faixa estimada para {est.area} m² em steel frame, chave na mão. O valor final depende dos materiais de acabamentos e revestimentos que você escolher — fechamos tudo na reunião de diagnóstico.
+          <div style={{ fontSize: 'clamp(24px,5vw,34px)', fontWeight: 800, letterSpacing: '-.5px', marginTop: 6 }}>De {brl(est.min)} <span style={{ opacity: .55, fontWeight: 500 }}>a</span> {brl(est.max)}</div>
+          <div style={{ fontSize: 12.5, opacity: .78, marginTop: 8, maxWidth: 620 }}>
+            {est.areaTotal} m² em {ambientes.length} ambientes, chave na mão. Inclui estrutura, mão de obra e os acabamentos que você escolheu. O valor final é fechado na reunião de diagnóstico.
           </div>
         </div>
 
-        {/* formulário */}
+        {/* FORM */}
         <div className="card" style={{ padding: 20, marginTop: 16 }}>
-          <div className="sec-title" style={{ marginTop: 0 }}>
-            {sel ? <>Gostou do <b style={{ color: 'var(--accent)' }}>{sel.nome}</b>? Deixe seu contato</> : 'Deixe seu contato e a gente começa'}
-          </div>
-          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 14px' }}>Sem compromisso e sem custo. O primeiro passo é uma reunião de diagnóstico pra entender o que você quer.</div>
+          <div className="sec-title" style={{ marginTop: 0 }}>{sel ? <>Gostou do <b style={{ color: 'var(--accent)' }}>{sel.nome}</b>? Deixe seu contato</> : 'Deixe seu contato e a gente começa'}</div>
+          <div className="pg-sub" style={{ fontSize: 13, margin: '-2px 0 14px' }}>Sem compromisso e sem custo. O primeiro passo é uma reunião de diagnóstico.</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
             <div className="field"><label>Seu nome</label><input style={inp} value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
             <div className="field"><label>WhatsApp ou e-mail</label><input style={inp} value={form.contato} onChange={(e) => setForm({ ...form, contato: e.target.value })} /></div>
             <div className="field"><label>Cidade da obra</label><input style={inp} value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} /></div>
-            <div className="field"><label>Quero contar um pouco (opcional)</label><input style={inp} value={form.obs} onChange={(e) => setForm({ ...form, obs: e.target.value })} placeholder="Ex.: 3 quartos, terreno em declive..." /></div>
+            <div className="field"><label>Quero contar um pouco (opcional)</label><input style={inp} value={form.obs} onChange={(e) => setForm({ ...form, obs: e.target.value })} placeholder="Ex.: terreno em declive..." /></div>
           </div>
           {erro && <div style={{ color: 'var(--crit,#b23)', fontSize: 13, marginTop: 10 }}>{erro}</div>}
-          <button className="btn" style={{ marginTop: 16, padding: '13px 24px', fontSize: 15, opacity: salvando ? .6 : 1 }} disabled={salvando} onClick={enviar}>
-            {salvando ? 'Enviando...' : 'Quero iniciar o planejamento →'}
-          </button>
+          <button className="btn" style={{ marginTop: 16, padding: '13px 24px', fontSize: 15, opacity: salvando ? .6 : 1 }} disabled={salvando} onClick={enviar}>{salvando ? 'Enviando...' : 'Quero iniciar o planejamento →'}</button>
         </div>
 
-        <div className="center-note" style={{ margin: '22px auto', fontSize: 12 }}>
-          MS Construções Inteligentes · Construindo de família para família
-        </div>
+        <div className="center-note" style={{ margin: '22px auto', fontSize: 12 }}>MS Construções Inteligentes · Construindo de família para família</div>
       </div>
+
+      {/* MODAL: escolha visual do material */}
+      {picker && (() => {
+        const s = SUPERFICIES.find((x) => x.key === picker.superficie)
+        const amb = ambientes[picker.idx]
+        return (
+          <div onClick={() => setPicker(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(10,8,6,.72)', zIndex: 60, display: 'grid', placeItems: 'center', padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: 18, width: 'min(860px,100%)', maxHeight: '88vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <div className="sec-title" style={{ margin: 0 }}>{s.label} · {amb.tipo}</div>
+                <button className="muted" onClick={() => setPicker(null)} style={{ fontSize: 20, cursor: 'pointer' }}>×</button>
+              </div>
+              <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Clique na imagem do acabamento que você quer neste ambiente.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
+                {s.itens.map((it) => {
+                  const on = amb.sel[picker.superficie] === it.id
+                  const un = picker.superficie === 'esquadria' ? esquadUnidades(amb.area) + ' un' : Math.round((picker.superficie === 'parede' ? 2.7 : 1) * amb.area) + ' m²'
+                  return (
+                    <button key={it.id} onClick={() => escolher(it.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+                      <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}>
+                        {it.img ? <img src={it.img} alt={it.nome} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <span style={{ fontWeight: 700, color: 'var(--ink2)', textAlign: 'center', padding: 10, fontSize: 13 }}>{it.nome}</span>}
+                      </div>
+                      <div style={{ padding: '9px 11px' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{it.nome}</div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{it.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'} · {un}</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginTop: 4 }}>{brl(custoSuperficie(picker.superficie, it, amb.area))}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </>
   )
 }

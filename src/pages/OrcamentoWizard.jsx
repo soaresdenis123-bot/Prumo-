@@ -2,6 +2,27 @@ import { useState, useEffect, Fragment } from 'react'
 import { BRL, saveOrcamento, listProdutosComFornecedor, listObras } from '../lib/data'
 import { SERVICOS, areaDosComodos } from '../lib/precificacao'
 import { MO_PCT_PADRAO, MO_MIN, MO_MAX, MARGEM_PCT_PADRAO, custoInstalado, precoVenda, margemDe } from '../lib/custos'
+import { parseSelecoes, ACAB_POR_ID, COEF, esquadUnidades } from '../lib/acabamentos'
+
+// grupo do orçamento gerado a partir do que o cliente escolheu no "Monte sua casa"
+const SUP_LABEL = { piso: 'Piso', parede: 'Paredes', teto: 'Teto', esquadria: 'Esquadrias' }
+const SUP_CAT = { piso: 'Revestimento', parede: 'Revestimento', teto: 'Acabamento', esquadria: 'Esquadrias' }
+function gerarAcabamentosCliente(selecoes) {
+  const itens = []
+  selecoes.forEach((a) => {
+    ;['piso', 'parede', 'teto', 'esquadria'].forEach((sup) => {
+      const it = ACAB_POR_ID[a.sel?.[sup]]
+      if (!it) return
+      const area = Number(a.area) || 0
+      const qty = sup === 'esquadria' ? esquadUnidades(area) : Math.max(1, Math.round((COEF[sup] || 1) * area))
+      const un = sup === 'esquadria' ? 'un' : 'm²'
+      const preco = Math.round(custoInstalado(it.compra, it.mo)) // custo material + mão de obra
+      itens.push({ ...AU(`${a.tipo} · ${SUP_LABEL[sup]}: ${it.nome}`, un, qty, preco, '', true, SUP_CAT[sup]), qtd: qty })
+    })
+  })
+  return { nome: 'Acabamentos escolhidos pelo cliente', itens }
+}
+const ACAB_GROUPS = ['Revestimento', 'Acabamento', 'Esquadrias']
 import PlumbMark from '../components/PlumbMark'
 
 /* =========================================================================
@@ -118,14 +139,17 @@ function gerarServicos(cfg) {
   return { nome: 'Projetos & Serviços', itens }
 }
 
-function gerarAmbientes(cfg) {
+function gerarAmbientes(cfg, excluirAcab) {
   const tg = cfg.tierGlobal // nível padrão vindo do cliente (0/1/2), se houver
   const grupos = []
   COMODOS.forEach((tipo) => {
     const n = Number(cfg.comodos[tipo]) || 0
     for (let i = 1; i <= n; i++) {
       const base = AMBS[tipo]
-      const itens = base.itens().map((it) => ({ ...it, qtd: qtd(it, base.area), sel: (it.k === 'ch' && tg != null) ? tg : it.sel }))
+      // quando o cliente já escolheu piso/parede/teto/esquadria, tira esses daqui pra não duplicar
+      let itens = base.itens()
+      if (excluirAcab) itens = itens.filter((it) => !ACAB_GROUPS.includes(it.g))
+      itens = itens.map((it) => ({ ...it, qtd: qtd(it, base.area), sel: (it.k === 'ch' && tg != null) ? tg : it.sel }))
       grupos.push({ nome: n > 1 ? `${tipo} ${i}` : tipo, area: base.area, itens })
     }
   })
@@ -149,6 +173,23 @@ export default function OrcamentoWizard({ prefill }) {
   // pré-preenche a partir de um lead ("Fazer orçamento" na aba Clientes)
   useEffect(() => {
     if (!prefill) return
+    // ---- formato novo: seleções por ambiente do "Monte sua casa" ----
+    const selData = parseSelecoes(prefill.obs)
+    if (selData && selData.ambientes && selData.ambientes.length) {
+      const tipoN = selData.tipo === 'sobrado' ? 'sobrado' : 'terrea'
+      const MAPA = { 'Quarto': 'Quarto', 'Suíte': 'Suíte', 'Banheiro': 'Banheiro', 'Lavabo': 'Lavabo', 'Cozinha': 'Cozinha', 'Sala de estar': 'Sala de estar', 'Sala de jantar': 'Sala de jantar', 'Área de serviço': 'Área de serviço', 'Escritório': 'Escritório', 'Varanda / gourmet': 'Varanda' }
+      const comodosN = {}
+      selData.ambientes.forEach((a) => { const k = MAPA[a.tipo] || 'Quarto'; comodosN[k] = (comodosN[k] || 0) + 1 })
+      const tgN = String(selData.padrao || '').toLowerCase().includes('alto') ? 2 : 1
+      const featN = {}
+      let paisEsc = 'entrada'
+      if (selData.paisagismo) { featN.paisagismo = true; paisEsc = /completo/.test(selData.paisagismo) ? 'completo' : 'entrada' }
+      setCfg((c) => ({ ...c, tipo: tipoN, area: selData.areaTotal || 120, comodos: comodosN, features: featN, tierGlobal: tgN, selecoes: selData.ambientes, paisEscopo: paisEsc }))
+      setMeta((m) => ({ ...m, cliente: prefill.nome || '', cidade: prefill.cidade || '', obra: prefill.modelo ? 'Casa ' + prefill.modelo : '', lead_id: prefill.id }))
+      setEtapa('config')
+      return
+    }
+    // ---- formato antigo (leads anteriores) ----
     const obs = (prefill.obs || '').toLowerCase()
     const tipo = prefill.tipo === 'sobrado' ? 'sobrado' : 'terrea'
     const areaM = obs.match(/(\d+)\s*m²/)
@@ -190,7 +231,13 @@ export default function OrcamentoWizard({ prefill }) {
     setEtapa('config')
   }
   function avancar() {
-    setGrupos([gerarServicos(cfg), gerarProjeto(cfg), ...gerarAmbientes(cfg)])
+    const temSel = cfg.selecoes && cfg.selecoes.length
+    setGrupos([
+      gerarServicos(cfg),
+      ...(temSel ? [gerarAcabamentosCliente(cfg.selecoes)] : []),
+      gerarProjeto(cfg),
+      ...gerarAmbientes(cfg, !!temSel),
+    ])
     setEtapa('detalhado')
   }
   const setComodo = (t, v) => setCfg({ ...cfg, comodos: { ...cfg.comodos, [t]: Math.max(0, v) } })

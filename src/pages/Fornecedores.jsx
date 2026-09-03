@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { contarPorCategoria, OBRA_CATEGORIAS } from '../lib/data'
+const PortfolioGrid = lazy(() => import('../components/PortfolioGrid'))
 
 export default function Fornecedores() {
   const nav = useNavigate()
   const [cont, setCont] = useState(null)
   const [err, setErr] = useState('')
+  const [aba, setAba] = useState('materiais') // materiais | portfolios
 
   useEffect(() => { contarPorCategoria().then(setCont).catch((e) => setErr(e.message)) }, [])
 
@@ -17,13 +19,27 @@ export default function Fornecedores() {
   const cats = [...OBRA_CATEGORIAS, ...extras]
   const totForn = Object.values(cont).reduce((t, c) => t + c.forn, 0)
   const totItens = Object.values(cont).reduce((t, c) => t + c.itens, 0)
+  const tab = (on) => ({ padding: '9px 18px', borderRadius: 999, border: '1px solid var(--line)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--ink2,#555)' })
 
   return (
     <>
-      <div className="topbar"><div className="crumb"><b>Fornecedores & Mão de obra</b></div><span className="chip-role">Interno</span></div>
+      <div className="topbar"><div className="crumb"><b>Fornecedores</b></div><span className="chip-role">Interno</span></div>
       <div className="content">
-        <div className="pg-head"><div><h1 className="pg">Fornecedores por categoria</h1>
-          <div className="pg-sub">{totForn} fornecedores · {totItens} itens · clique numa categoria pra ver os itens e o portfólio</div></div></div>
+        <div className="pg-head"><div><h1 className="pg">Fornecedores</h1>
+          <div className="pg-sub">Material e mão de obra dos seus parceiros, e o portfólio de acabamentos que o cliente vê.</div></div></div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          <button style={tab(aba === 'materiais')} onClick={() => setAba('materiais')}>Materiais & Serviços</button>
+          <button style={tab(aba === 'portfolios')} onClick={() => setAba('portfolios')}>Portfólios</button>
+        </div>
+
+        {aba === 'portfolios' ? (
+          <div>
+            <div className="pg-sub" style={{ fontSize: 13, marginBottom: 14 }}>Catálogo de acabamentos, revestimentos e paisagismo. Também aberto ao cliente em <b>/acabamentos</b>.</div>
+            <Suspense fallback={<div className="spin" />}><PortfolioGrid /></Suspense>
+          </div>
+        ) : (<>
+        <div className="pg-head" style={{ marginTop: 0 }}><div><div className="pg-sub">{totForn} fornecedores · {totItens} itens · clique numa categoria pra ver os itens</div></div></div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
           {cats.map((c) => {
@@ -46,6 +62,7 @@ export default function Fornecedores() {
             )
           })}
         </div>
+        </>)}
       </div>
     </>
   )
