@@ -10,7 +10,7 @@ import { ACABIMG } from './acab_img'
 import { precoVenda, MARGEM_PCT_PADRAO } from './custos'
 
 // coeficiente de consumo por m² de ambiente
-export const COEF = { piso: 1.0, teto: 1.0, parede: 2.7 }
+export const COEF = { piso: 1.0, teto: 1.0, parede: 2.7, esquadria: 0.15 } // esquadria: m² de vão ≈ 15% da área do piso
 
 // A = item de acabamento. compra em R$/unidade; mo = mão de obra como % do material.
 const A = (id, superficie, nome, padrao, compra, mo, img) => ({ id, superficie, nome, padrao, compra, mo, img: img || null })
@@ -59,22 +59,34 @@ export const PAREDES = [
 
 // ---- TETO / FORRO (R$/m²) ----
 export const TETOS = [
-  A('teto-gesso', 'teto', 'Forro de gesso liso', 'medio', 100, 0.35, null),
-  A('teto-gesso-sanca', 'teto', 'Gesso + sanca + LED', 'alto', 140, 0.35, null),
+  A('teto-gesso', 'teto', 'Forro de gesso liso', 'medio', 100, 0.35, ACABIMG['teto-gesso']),
+  A('teto-gesso-sanca', 'teto', 'Gesso + sanca + LED', 'alto', 140, 0.35, ACABIMG['teto-gesso-sanca']),
   A('teto-forro-pvc', 'teto', 'Forro PVC premium', 'medio', 80, 0.3, ACABIMG['teto-forro-pvc']),
   A('teto-forro-wpc', 'teto', 'Forro WPC', 'alto', 120, 0.4, ACABIMG['teto-forro-wpc']),
 ]
 
-// ---- ESQUADRIAS (R$/unidade; nº de unidades estimado pela área) ----
+// ---- ESQUADRIAS (R$/m² de vão; área de vão ≈ 15% da área do piso) ----
+// Regras: dormitórios (Quarto/Suíte) sempre com PERSIANA integrada (alumínio ou PVC).
+// Cozinha/sala/banheiro = estrutura + vidro (mais barato), com opção com/sem persiana.
+// Estrutura BRANCA é mais barata; estrutura em cor (preto/amadeirado/anodizado) soma a diferença.
+// E = item de esquadria (aceita flags persiana / dormitorio).
+const E = (id, nome, padrao, compra, mo, img, persiana, dormitorio) =>
+  ({ id, superficie: 'esquadria', nome, padrao, compra, mo, img: img || null, persiana: !!persiana, dormitorio: !!dormitorio })
 export const ESQUADRIAS = [
-  A('esq-aluminio-branca', 'esquadria', 'Alumínio linha branca', 'medio', 1800, 0.2, ACABIMG['esq-aluminio-branca']),
-  A('esq-pvc', 'esquadria', 'PVC', 'medio', 1400, 0.2, ACABIMG['esq-pvc']),
-  A('esq-aluminio-anodizado', 'esquadria', 'Alumínio anodizado', 'medio', 2000, 0.2, ACABIMG['esq-aluminio-anodizado']),
-  A('esq-aluminio-premium', 'esquadria', 'Alumínio premium (preto / amadeirado)', 'alto', 2200, 0.2, ACABIMG['esq-aluminio-premium']),
-  A('esq-pvc-alto', 'esquadria', 'PVC alto desempenho', 'alto', 1800, 0.2, ACABIMG['esq-pvc-alto']),
-  A('esq-vidro-duplo', 'esquadria', 'Vidro duplo acústico / térmico', 'alto', 2400, 0.25, ACABIMG['esq-vidro-duplo']),
-  A('esq-vidro-correr-minimal', 'esquadria', 'Vidro de correr amplo / sistema minimal', 'alto', 3000, 0.25, ACABIMG['esq-vidro-correr-minimal']),
+  // --- com persiana integrada (padrão dos dormitórios) ---
+  E('esq-aluminio-branco-persiana', 'Alumínio branco + vidro + persiana', 'medio', 1100, 0.22, ACABIMG['esq-aluminio-branca'], true, true),
+  E('esq-pvc-persiana', 'PVC + vidro + persiana', 'medio', 1200, 0.22, ACABIMG['esq-pvc'], true, true),
+  E('esq-aluminio-cor-persiana', 'Alumínio cor (preto / amadeirado) + vidro + persiana', 'alto', 1350, 0.22, ACABIMG['esq-aluminio-premium'], true, true),
+  // --- só estrutura + vidro (sem persiana) — mais barato: cozinha, sala, banheiro ---
+  E('esq-aluminio-branco-vidro', 'Alumínio branco + vidro', 'medio', 650, 0.20, ACABIMG['esq-aluminio-branca'], false, false),
+  E('esq-pvc-vidro', 'PVC + vidro', 'medio', 700, 0.20, ACABIMG['esq-pvc'], false, false),
+  E('esq-aluminio-cor-vidro', 'Alumínio cor (preto / amadeirado) + vidro', 'alto', 880, 0.20, ACABIMG['esq-aluminio-anodizado'], false, false),
+  E('esq-vidro-correr-minimal', 'Vidro de correr amplo / sistema minimal', 'alto', 1100, 0.25, ACABIMG['esq-vidro-correr-minimal'], false, false),
 ]
+// id da esquadria padrão para dormitórios (alumínio branco com persiana)
+export const ESQ_DORMITORIO_PADRAO = 'esq-aluminio-branco-persiana'
+// id da esquadria padrão para demais ambientes (mais barata)
+export const ESQ_PADRAO = 'esq-aluminio-branco-vidro'
 
 // ---- TELHADO / COBERTURA (R$/m² de telhado; área ≈ projeção × 1,25) ----
 const T = (id, nome, padrao, compra, mo, img, platibanda = false) => ({ id, nome, padrao, compra, mo, img: img || null, platibanda })
@@ -118,15 +130,17 @@ SUPERFICIES.forEach((s) => s.itens.forEach((it) => { ACAB_POR_ID[it.id] = it }))
 // venda unitária (com mão de obra + margem)
 export const vendaItem = (it, margem = MARGEM_PCT_PADRAO) => precoVenda(it.compra, it.mo, margem)
 
-// nº de esquadrias estimado pela área do ambiente
+// nº de esquadrias estimado pela área do ambiente (legado)
 export const esquadUnidades = (area) => Math.max(1, Math.round((Number(area) || 0) / 12))
+// m² de vão de esquadria estimado pela área do ambiente (≈ 15% do piso)
+export const esquadAreaM2 = (area) => Math.max(1, Math.round(COEF.esquadria * (Number(area) || 0)))
 
 // custo (venda) de uma superfície num ambiente de `area` m²
 export function custoSuperficie(superficie, it, area, margem = MARGEM_PCT_PADRAO) {
   if (!it) return 0
   const a = Number(area) || 0
   const v = vendaItem(it, margem)
-  if (superficie === 'esquadria') return esquadUnidades(a) * v
+  // esquadria também escala por m² (COEF.esquadria = m² de vão ≈ 15% do piso)
   return (COEF[superficie] || 1) * a * v
 }
 

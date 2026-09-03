@@ -2,7 +2,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { BRL, saveOrcamento, listProdutosComFornecedor, listObras } from '../lib/data'
 import { SERVICOS, areaDosComodos } from '../lib/precificacao'
 import { MO_PCT_PADRAO, MO_MIN, MO_MAX, MARGEM_PCT_PADRAO, custoInstalado, precoVenda, margemDe } from '../lib/custos'
-import { parseSelecoes, ACAB_POR_ID, COEF, esquadUnidades } from '../lib/acabamentos'
+import { parseSelecoes, ACAB_POR_ID, COEF, esquadAreaM2 } from '../lib/acabamentos'
 
 // grupo do orçamento gerado a partir do que o cliente escolheu no "Monte sua casa"
 const SUP_LABEL = { piso: 'Piso', parede: 'Paredes', teto: 'Teto', esquadria: 'Esquadrias' }
@@ -14,8 +14,8 @@ function gerarAcabamentosCliente(selecoes) {
       const it = ACAB_POR_ID[a.sel?.[sup]]
       if (!it) return
       const area = Number(a.area) || 0
-      const qty = sup === 'esquadria' ? esquadUnidades(area) : Math.max(1, Math.round((COEF[sup] || 1) * area))
-      const un = sup === 'esquadria' ? 'un' : 'm²'
+      const qty = sup === 'esquadria' ? esquadAreaM2(area) : Math.max(1, Math.round((COEF[sup] || 1) * area))
+      const un = 'm²'
       const preco = Math.round(custoInstalado(it.compra, it.mo)) // custo material + mão de obra
       itens.push({ ...AU(`${a.tipo} · ${SUP_LABEL[sup]}: ${it.nome}`, un, qty, preco, '', true, SUP_CAT[sup]), qtd: qty })
     })

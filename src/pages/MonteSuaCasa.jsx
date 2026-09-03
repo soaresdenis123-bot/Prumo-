@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { salvarLeadProjeto } from '../lib/data'
 import { MODELOS } from '../lib/modelos'
-import { SUPERFICIES, AMBIENTES_BASE, ACAB_POR_ID, custoSuperficie, vendaItem, esquadUnidades,
+import { SUPERFICIES, AMBIENTES_BASE, ACAB_POR_ID, custoSuperficie, vendaItem, esquadAreaM2,
+  ESQ_DORMITORIO_PADRAO, ESQ_PADRAO,
   TELHADOS_POR_ID, telhadosDisponiveis, areaTelhado, PAISAGISMOS, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
 import { brl } from '../lib/precificacao'
 import PlumbMark from '../components/PlumbMark'
@@ -31,8 +32,11 @@ export default function MonteSuaCasa() {
   const lista = useMemo(() => MODELOS.filter((m) => m.tipo === tipo && (telhado === 'todos' || m.telhado === telhado)), [tipo, telhado])
 
   // ---- ambientes ----
+  // dormitório (Quarto / Suíte) já vem com esquadria de persiana como padrão
+  const ehDormitorio = (tp) => /quarto|su[íi]te/i.test(tp || '')
   function addAmbiente(base) {
-    setAmbientes((a) => [...a, { id: AMBID++, tipo: base.tipo, area: base.area, sel: {}, done: false }])
+    const esq = ehDormitorio(base.tipo) ? ESQ_DORMITORIO_PADRAO : ESQ_PADRAO
+    setAmbientes((a) => [...a, { id: AMBID++, tipo: base.tipo, area: base.area, sel: { esquadria: esq }, done: false }])
   }
   const updAmb = (idx, fn) => setAmbientes((a) => a.map((x, i) => (i === idx ? fn(x) : x)))
   const setArea = (idx, v) => updAmb(idx, (x) => ({ ...x, area: Math.max(1, v) }))
@@ -317,7 +321,7 @@ export default function MonteSuaCasa() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
                 {s.itens.map((it) => {
                   const on = amb.sel[picker.superficie] === it.id
-                  const un = picker.superficie === 'esquadria' ? esquadUnidades(amb.area) + ' un' : Math.round((picker.superficie === 'parede' ? 2.7 : 1) * amb.area) + ' m²'
+                  const un = picker.superficie === 'esquadria' ? esquadAreaM2(amb.area) + ' m²' : Math.round((picker.superficie === 'parede' ? 2.7 : 1) * amb.area) + ' m²'
                   return (
                     <button key={it.id} onClick={() => escolher(it.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
                       <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}>
