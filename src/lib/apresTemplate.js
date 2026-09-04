@@ -213,7 +213,7 @@ section{position:relative;padding:120px 26px;overflow:hidden}
   <div class="wrap">
     <div class="eyebrow rv">Quem assina a sua obra</div>
     <h2 class="rv d1" style="margin-top:16px;max-width:16ch">O sonho é seu.<br><span class="amber">A engenharia é nossa.</span></h2>
-    <p class="lead rv d2" style="margin-top:20px">A MS é uma construtora familiar que trouxe o steel frame para o Rio Grande do Sul e constrói com equipe própria, do primeiro perfil de aço ao último acabamento. À frente, o engenheiro responsável Gervásio Medeiros Soares, com mais de 25 anos de obra, de residências a shopping centers. Engenharia industrializada, dentro da NBR 16970, com ART e CREA: prazo definido, preço fechado e o financiamento encaminhado do jeito certo.</p>
+    <p class="lead rv d2" style="margin-top:20px">A MS é uma construtora familiar que, após anos na construção no sistema convencional, optou por usar no seu portfólio o sistema construtivo mais moderno e tecnológico que está sendo usado no mundo. O sistema Light Steel Frame traz rapidez e redução de perdas e desperdício na obra: uma construção que agrega conforto, tecnologia e sustentabilidade. À frente, uma equipe técnica capacitada e o responsável técnico, com mais de 25 anos de experiência em obras de pequeno, médio e grande porte, com atuação na construção residencial, industrial e de shopping centers. Engenharia industrializada, dentro da NBR 16970, com ART, prazo definido e custos que se adaptam à sua necessidade. Assessoria para facilitar a sua vida e agilizar a liberação do seu financiamento.</p>
     <div class="stats">
       <div class="stat rv d1"><div class="n" data-to="60" data-suf="%">0</div><div class="l">mais rápida que a obra convencional</div></div>
       <div class="stat rv d2"><div class="n" data-to="25" data-suf="+">0</div><div class="l">anos do engenheiro responsável na obra</div></div>
@@ -287,11 +287,11 @@ section{position:relative;padding:120px 26px;overflow:hidden}
     <h2 class="rv d1" style="margin-top:14px">Chave na mão. <span class="amber">Pronta pra morar.</span></h2>
     <div class="incl rv d2" style="margin-top:32px">
       <div class="col a"><div class="hd">✓ Incluso</div>
-        <div class="row">Casa completa, com todos os acabamentos</div>
-        <div class="row">Revestimentos: pisos e paredes</div>
-        <div class="row">Louças e metais instalados</div>
-        <div class="row">Iluminação pronta pra acender</div>
-        <div class="row">ART, garantias e book de entrega</div>
+        <div class="row">Casa completa — finalizada conforme os projetos aprovados</div>
+        <div class="row">Revestimentos — pisos, paredes e forros conforme você escolheu</div>
+        <div class="row">Louças e metais — instalados conforme você escolheu</div>
+        <div class="row">Iluminação — luminárias instaladas conforme você escolheu</div>
+        <div class="row">Book de entrega — projetos aprovados, ART, garantias e manual de uso e manutenção</div>
       </div>
       <div class="col b"><div class="hd">Por sua conta</div>
         <div class="row">Mobília</div>
@@ -351,7 +351,7 @@ section{position:relative;padding:120px 26px;overflow:hidden}
     <img src="/apres/logo.png" class="rv" style="width:72px;margin:0 auto 18px;display:block">
     <div class="eyebrow rv d1" style="text-align:center">A sua casa já pode ter uma data pra começar</div>
     <div class="big-quote rv d2" style="margin-top:20px">${primeiroNome ? esc(primeiroNome) + ', vamos construir' : 'Vamos construir'}<br>o sonho da <span class="amber">sua casa</span>?</div>
-    <p class="lead rv d3" style="margin:24px auto 0;text-align:center">Tudo o que você viu começa com um passo: a assinatura do projeto. A partir dele, a sua casa sai da imaginação e vira planta, 3D, obra e, no fim, o lar da sua família.</p>
+    <p class="lead rv d3" style="margin:24px auto 0;text-align:center">Tudo o que você viu começa com um passo: a assinatura do contrato. A partir dele, o seu sonho começa a se tornar realidade e a casa que você imaginou começa a criar forma. Iniciamos o seu projeto e em poucos dias você vê ele em 3D. E logo o seu lar estará pronto para morar com a sua família.</p>
     <div class="foot rv d4" style="margin-top:40px">Construímos de família para família · Grupo MS · ${esc(cidade || 'Montenegro/RS')}</div>
   </div>
 </section>
