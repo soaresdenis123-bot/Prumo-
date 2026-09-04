@@ -232,7 +232,7 @@ section{position:relative;padding:120px 26px;overflow:hidden}
     <div class="mrow">${dup(galRow, row1)}</div>
     <div class="mrow rev">${dup(galRow, row2)}</div>
   </div>
-  <div class="wrap" style="margin-top:26px"><p class="lead rv">Do Farm House ao Alto Padrão. A sua ${esc(modeloNome)} entra nessa família, com a sua cara.</p></div>
+  <div class="wrap" style="margin-top:26px"><p class="lead rv">Do básico ao alto padrão. Da casa de campo à arquitetura moderna. Engenharia com tecnologia, para realizar o seu sonho.</p></div>
 </section>
 
 <section class="casa" id="s4">
