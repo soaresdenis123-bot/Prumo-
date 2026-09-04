@@ -226,7 +226,7 @@ section{position:relative;padding:120px 26px;overflow:hidden}
 <section class="gal" id="s3">
   <div class="wrap" style="max-width:1120px">
     <div class="eyebrow rv">O padrão MS</div>
-    <h2 class="rv d1" style="margin-top:14px;max-width:20ch">Casas que a gente já sabe fazer <span class="amber">bem feitas</span>.</h2>
+    <h2 class="rv d1" style="margin-top:14px;max-width:20ch">Casas construídas no padrão do <span class="amber">seu sonho</span>.</h2>
   </div>
   <div style="margin-top:40px">
     <div class="mrow">${dup(galRow, row1)}</div>
