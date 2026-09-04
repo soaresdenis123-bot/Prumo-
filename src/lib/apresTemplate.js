@@ -254,14 +254,29 @@ section{position:relative;padding:120px 26px;overflow:hidden}
   <div class="wrap">
     <div class="eyebrow rv">Do papel à chave, com data</div>
     <h2 class="rv d1" style="margin-top:14px">O caminho da sua casa.</h2>
+    <p class="lead rv d2" style="margin-top:16px">Antes de erguer a obra, cada etapa de projeto e aprovação tem prazo definido. É assim que você sabe onde a sua casa está, o tempo todo.</p>
+    <div class="eyebrow rv" style="margin-top:34px;color:var(--muted)">Etapas antes de iniciar a construção</div>
     <div class="tl" id="tl">
       <div class="line"><i></i></div>
-      <div class="step rv"><div class="dot">1</div><span class="dur">2 dias</span><div class="t">Entrevista e levantamento</div><div class="d">Entendemos o seu sonho, a rotina e o terreno.</div></div>
-      <div class="step rv"><div class="dot">2</div><span class="dur">7 dias</span><div class="t">Projeto conceitual em 3D</div><div class="d">A sua casa ganha forma e volume, você vê antes de existir.</div></div>
-      <div class="step rv"><div class="dot">3</div><span class="dur">5 dias</span><div class="t">Ajustes e aprovação</div><div class="d">Refinamos junto até ficar do seu jeito.</div></div>
-      <div class="step rv"><div class="dot">4</div><span class="dur">14 dias</span><div class="t">Projeto executivo</div><div class="d">Elétrica, hidráulica, estrutura e acabamentos detalhados.</div></div>
-      <div class="step rv"><div class="dot">5</div><span class="dur">30 dias</span><div class="t">Aprovações e financiamento</div><div class="d">Prefeitura e banco. Steel frame é financiável (NBR 16970).</div></div>
-      <div class="step rv"><div class="dot">6</div><span class="dur">3 a 5 meses</span><div class="t">Execução da obra</div><div class="d">Fundação, estrutura, fechamento e acabamentos, com você acompanhando.</div></div>
+      <div class="step rv"><div class="dot">1</div><span class="dur">2 dias</span><div class="t">Entrevista e levantamento de necessidades</div><div class="d">Entendemos o seu sonho, a rotina e o terreno.</div></div>
+      <div class="step rv"><div class="dot">2</div><span class="dur">7 dias</span><div class="t">Projeto básico / conceitual</div><div class="d">A ideia da casa ganha forma: plantas e volumes.</div></div>
+      <div class="step rv"><div class="dot">3</div><span class="dur">5 dias</span><div class="t">Aprovação e ajuste do projeto</div><div class="d">Refinamos junto até ficar do seu jeito.</div></div>
+      <div class="step rv"><div class="dot">4</div><span class="dur">14 dias</span><div class="t">Projeto arquitetônico e complementares</div><div class="d">Arquitetura detalhada com os projetos complementares.</div></div>
+      <div class="step rv"><div class="dot">5</div><span class="dur">3 dias</span><div class="t">Aprovação do cliente e/ou condomínio</div><div class="d">O seu aval (e o do condomínio, quando houver).</div></div>
+      <div class="step rv"><div class="dot">6</div><span class="dur">30 dias</span><div class="t">Aprovação na Prefeitura</div><div class="d">Entrada e liberação do projeto no município.</div></div>
+      <div class="step rv"><div class="dot">7</div><span class="dur">14 dias</span><div class="t">Projeto de estrutura steel frame</div><div class="d">Dimensionamento da estrutura com responsável técnico.</div></div>
+      <div class="step rv"><div class="dot">8</div><span class="dur">14 dias</span><div class="t">Projeto de fundação</div><div class="d">Fundação calculada para o seu terreno.</div></div>
+      <div class="step rv"><div class="dot">9</div><span class="dur">30 dias</span><div class="t">Aprovação do crédito / financiamento</div><div class="d">Encaminhamento do financiamento. Steel frame é financiável (NBR 16970).</div></div>
+    </div>
+    <div class="price rv" style="margin-top:6px;display:inline-block">
+      <div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700">Total pré-obra</div>
+      <div class="n" style="margin-top:6px">≈ 120 dias</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">As etapas correm em paralelo sempre que possível.</div>
+    </div>
+    <div class="eyebrow rv" style="margin-top:40px;color:var(--muted)">E então, a construção</div>
+    <div class="tl">
+      <div class="line"><i style="height:100%"></i></div>
+      <div class="step rv in"><div class="dot">10</div><span class="dur">3 a 5 meses</span><div class="t">Execução da obra</div><div class="d">Fundação, estrutura, fechamento e acabamentos, com você acompanhando ao vivo.</div></div>
     </div>
   </div>
 </section>
