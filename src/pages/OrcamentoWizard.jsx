@@ -235,13 +235,19 @@ export default function OrcamentoWizard({ prefill }) {
   }
   function avancar() {
     let c = cfg
+    if (usarAcab && !ambSel.length && !(cfg.selecoes && cfg.selecoes.length)) {
+      alert('Adicione pelo menos um ambiente (Quarto, Cozinha…) para gerar o orçamento.'); return
+    }
     // se a equipe montou os acabamentos visualmente, usa essas seleções (mesmo caminho do "Monte sua casa")
     if (usarAcab && ambSel.length) {
       const selecoes = ambSel.map((a) => ({ tipo: a.tipo, area: Number(a.area) || 0, sel: a.sel }))
       const areaTot = ambSel.reduce((t, a) => t + (Number(a.area) || 0), 0)
       const tier = cobItem ? (cobItem.padrao === 'alto' ? 2 : 1) : cfg.telhadoTier
+      // deriva os cômodos a partir dos ambientes montados (para gerar a infra/estrutura)
+      const comodosDerivados = {}
+      ambSel.forEach((a) => { const k = comodoKey(a.tipo); comodosDerivados[k] = (comodosDerivados[k] || 0) + 1 })
       c = {
-        ...cfg, selecoes, area: areaTot || cfg.area, telhadoTier: tier,
+        ...cfg, selecoes, comodos: comodosDerivados, area: areaTot || cfg.area, telhadoTier: tier,
         telhado: cobItem ? cobItem.nome : cfg.telhado,
         features: { ...cfg.features, paisagismo: paisSel ? true : cfg.features.paisagismo },
         paisEscopo: paisSel ? (/completo|18/.test(paisSel) ? 'completo' : 'entrada') : cfg.paisEscopo,
@@ -260,8 +266,10 @@ export default function OrcamentoWizard({ prefill }) {
   const setComodo = (t, v) => setCfg({ ...cfg, comodos: { ...cfg.comodos, [t]: Math.max(0, v) } })
 
   // ---- seleção visual de acabamentos (igual ao "Monte sua casa"), direto no orçamento ----
-  const [usarAcab, setUsarAcab] = useState(false)
+  const [usarAcab, setUsarAcab] = useState(true) // modo visual (igual "Monte sua casa") ligado por padrão
   const [ambSel, setAmbSel] = useState([])   // [{id,tipo,area,sel:{},done}]
+  // mapeia o tipo do ambiente para a chave de cômodo (para gerar infra/estrutura)
+  const comodoKey = (tipo) => COMODOS.includes(tipo) ? tipo : (COMODOS.find((k) => tipo.startsWith(k) || k.startsWith((tipo || '').split(' ')[0])) || 'Quarto')
   const [pkAcab, setPkAcab] = useState(null)  // {idx, superficie}
   const [cobSel, setCobSel] = useState(null)  // id do telhado
   const [paisSel, setPaisSel] = useState(null) // id do paisagismo
@@ -354,7 +362,7 @@ export default function OrcamentoWizard({ prefill }) {
           <div className="field"><label>Telhado</label><select value={cfg.telhado} onChange={(e) => { const t = TELHADOS.find((x) => x[0] === e.target.value); setCfg({ ...cfg, telhado: e.target.value, telhadoTier: t ? t[1] : 1 }) }} style={inp}>{TELHADOS.map(([n]) => <option key={n} value={n}>{n}</option>)}</select></div>
         </div>
       </div>
-      <div className="card" style={{ padding: 18, marginBottom: 16 }}>
+      <div className="card" style={{ padding: 18, marginBottom: 16, display: usarAcab ? 'none' : 'block' }}>
         <div className="sec-title" style={{ marginTop: 0 }}>Cômodos</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 10 }}>
           {COMODOS.map((t) => (
@@ -383,7 +391,8 @@ export default function OrcamentoWizard({ prefill }) {
           </>
         ) : (
           <>
-            <div className="pg-sub" style={{ fontSize: 13, margin: '2px 0 14px' }}>Ajuste o tamanho e escolha os acabamentos de cada ambiente. Vieram do que você marcou em Cômodos.</div>
+            <div className="pg-sub" style={{ fontSize: 13, margin: '2px 0 14px' }}>Adicione cada ambiente abaixo e, ao adicionar, escolha piso, paredes, teto e esquadrias vendo as imagens. Ao terminar cada um, clique em Concluir.</div>
+            {ambSel.length === 0 && <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Comece adicionando um ambiente (ex.: Quarto, Cozinha, Sala…) nos botões abaixo.</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {ambSel.map((amb, idx) => amb.done ? (
                 <div key={amb.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
