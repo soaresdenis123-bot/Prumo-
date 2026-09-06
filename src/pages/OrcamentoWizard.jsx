@@ -2,7 +2,10 @@ import { useState, useEffect, Fragment } from 'react'
 import { BRL, saveOrcamento, listProdutosComFornecedor, listObras } from '../lib/data'
 import { SERVICOS, areaDosComodos } from '../lib/precificacao'
 import { MO_PCT_PADRAO, MO_MIN, MO_MAX, MARGEM_PCT_PADRAO, custoInstalado, precoVenda, margemDe } from '../lib/custos'
-import { parseSelecoes, ACAB_POR_ID, COEF, esquadAreaM2 } from '../lib/acabamentos'
+import { parseSelecoes, ACAB_POR_ID, COEF, esquadAreaM2, SUPERFICIES, AMBIENTES_BASE,
+  ESQ_DORMITORIO_PADRAO, ESQ_PADRAO, telhadosDisponiveis, TELHADOS_POR_ID, PAISAGISMOS, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
+
+let ACID = 1 // id incremental dos ambientes montados no wizard
 
 // grupo do orçamento gerado a partir do que o cliente escolheu no "Monte sua casa"
 const SUP_LABEL = { piso: 'Piso', parede: 'Paredes', teto: 'Teto', esquadria: 'Esquadrias' }
@@ -231,16 +234,56 @@ export default function OrcamentoWizard({ prefill }) {
     setEtapa('config')
   }
   function avancar() {
-    const temSel = cfg.selecoes && cfg.selecoes.length
+    let c = cfg
+    // se a equipe montou os acabamentos visualmente, usa essas seleções (mesmo caminho do "Monte sua casa")
+    if (usarAcab && ambSel.length) {
+      const selecoes = ambSel.map((a) => ({ tipo: a.tipo, area: Number(a.area) || 0, sel: a.sel }))
+      const areaTot = ambSel.reduce((t, a) => t + (Number(a.area) || 0), 0)
+      const tier = cobItem ? (cobItem.padrao === 'alto' ? 2 : 1) : cfg.telhadoTier
+      c = {
+        ...cfg, selecoes, area: areaTot || cfg.area, telhadoTier: tier,
+        telhado: cobItem ? cobItem.nome : cfg.telhado,
+        features: { ...cfg.features, paisagismo: paisSel ? true : cfg.features.paisagismo },
+        paisEscopo: paisSel ? (/completo|18/.test(paisSel) ? 'completo' : 'entrada') : cfg.paisEscopo,
+      }
+      setCfg(c)
+    }
+    const temSel = c.selecoes && c.selecoes.length
     setGrupos([
-      gerarServicos(cfg),
-      ...(temSel ? [gerarAcabamentosCliente(cfg.selecoes)] : []),
-      gerarProjeto(cfg),
-      ...gerarAmbientes(cfg, !!temSel),
+      gerarServicos(c),
+      ...(temSel ? [gerarAcabamentosCliente(c.selecoes)] : []),
+      gerarProjeto(c),
+      ...gerarAmbientes(c, !!temSel),
     ])
     setEtapa('detalhado')
   }
   const setComodo = (t, v) => setCfg({ ...cfg, comodos: { ...cfg.comodos, [t]: Math.max(0, v) } })
+
+  // ---- seleção visual de acabamentos (igual ao "Monte sua casa"), direto no orçamento ----
+  const [usarAcab, setUsarAcab] = useState(false)
+  const [ambSel, setAmbSel] = useState([])   // [{id,tipo,area,sel:{},done}]
+  const [pkAcab, setPkAcab] = useState(null)  // {idx, superficie}
+  const [cobSel, setCobSel] = useState(null)  // id do telhado
+  const [paisSel, setPaisSel] = useState(null) // id do paisagismo
+  const ehDorm = (tp) => /quarto|su[íi]te/i.test(tp || '')
+  const esqPad = (tp) => (ehDorm(tp) ? ESQ_DORMITORIO_PADRAO : ESQ_PADRAO)
+  const novoAmb = (tipo, area) => ({ id: ACID++, tipo, area: area || 10, sel: { esquadria: esqPad(tipo) }, done: false })
+  function abrirAcab() {
+    // expande os cômodos escolhidos em ambientes individuais (já concluídos, prontos pra ajustar)
+    const list = []
+    COMODOS.forEach((t) => { const n = Number(cfg.comodos[t]) || 0; for (let i = 0; i < n; i++) list.push({ ...novoAmb(t, AMBS[t]?.area || 10), done: true }) })
+    setAmbSel(list); setUsarAcab(true)
+  }
+  const updAmb = (idx, fn) => setAmbSel((a) => a.map((x, i) => (i === idx ? fn(x) : x)))
+  const setAreaA = (idx, v) => updAmb(idx, (x) => ({ ...x, area: Math.max(1, v) }))
+  const removeA = (idx) => setAmbSel((a) => a.filter((_, i) => i !== idx))
+  const concluirA = (idx) => updAmb(idx, (x) => ({ ...x, done: true }))
+  const editarA = (idx) => updAmb(idx, (x) => ({ ...x, done: false }))
+  const addA = (tipo, area) => setAmbSel((a) => [...a, novoAmb(tipo, area)])
+  const escolherA = (id) => { updAmb(pkAcab.idx, (x) => ({ ...x, sel: { ...x.sel, [pkAcab.superficie]: id } })); setPkAcab(null) }
+  const platibanda = false
+  const telhadoOpts = telhadosDisponiveis(platibanda)
+  const cobItem = (cobSel && telhadoOpts.find((t) => t.id === cobSel)) || null
 
   // edição no detalhado
   const upd = (gi, ii, fn) => setGrupos(grupos.map((g, x) => x !== gi ? g : { ...g, itens: g.itens.map((it, y) => y !== ii ? it : fn(it)) }))
@@ -326,6 +369,97 @@ export default function OrcamentoWizard({ prefill }) {
           ))}
         </div>
       </div>
+      {/* ---- acabamentos visuais (igual Monte sua casa) ---- */}
+      <div className="card" style={{ padding: 18, marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div className="sec-title" style={{ marginTop: 0 }}>Acabamentos e revestimentos <span className="muted" style={{ fontWeight: 400, fontSize: 12.5 }}>· opcional</span></div>
+          {usarAcab && <button className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }} onClick={() => setUsarAcab(false)}>usar modo simples</button>}
+        </div>
+        {!usarAcab ? (
+          <>
+            <div className="pg-sub" style={{ fontSize: 13, margin: '2px 0 12px' }}>Escolha piso, paredes, teto, esquadrias, telhado e paisagismo vendo as imagens — igual o cliente faz no “Monte sua casa”. Isso alimenta o detalhado automaticamente.</div>
+            <button type="button" className="btn" onClick={abrirAcab} disabled={!COMODOS.some((t) => Number(cfg.comodos[t]) > 0)} style={{ padding: '10px 16px' }}>🖼 Escolher acabamentos vendo as imagens</button>
+            {!COMODOS.some((t) => Number(cfg.comodos[t]) > 0) && <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>Adicione ao menos um cômodo acima para montar os acabamentos.</div>}
+          </>
+        ) : (
+          <>
+            <div className="pg-sub" style={{ fontSize: 13, margin: '2px 0 14px' }}>Ajuste o tamanho e escolha os acabamentos de cada ambiente. Vieram do que você marcou em Cômodos.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {ambSel.map((amb, idx) => amb.done ? (
+                <div key={amb.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, minWidth: 110 }}>✓ {amb.tipo} <span className="muted" style={{ fontWeight: 400 }}>· {amb.area} m²</span></div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {SUPERFICIES.map((s) => { const it = ACAB_POR_ID[amb.sel[s.key]]; return (
+                      <div key={s.key} title={s.label + (it ? ': ' + it.nome : '')} style={{ width: 32, height: 32, borderRadius: 7, overflow: 'hidden', background: '#f0ece4', border: '1px solid var(--line)' }}>
+                        {it?.img && <img src={it.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      </div>) })}
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button type="button" onClick={() => editarA(idx)} className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }}>✎ editar</button>
+                    <button type="button" onClick={() => addA(amb.tipo, amb.area)} style={{ border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', borderRadius: 999, padding: '4px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ outro</button>
+                    <button type="button" onClick={() => removeA(idx)} className="muted" style={{ fontSize: 17, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
+                  </div>
+                </div>
+              ) : (
+                <div key={amb.id} style={{ border: '2px solid var(--accent)', borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{amb.tipo}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="muted" style={{ fontSize: 12.5 }}>Tamanho</span>
+                      <button type="button" onClick={() => setAreaA(idx, amb.area - 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>−</button>
+                      <b className="mono" style={{ minWidth: 42, textAlign: 'center' }}>{amb.area} m²</b>
+                      <button type="button" onClick={() => setAreaA(idx, amb.area + 1)} style={{ border: '1px solid var(--line)', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', background: 'transparent', color: 'var(--ink)', fontSize: 16 }}>+</button>
+                      <button type="button" onClick={() => removeA(idx)} className="muted" style={{ fontSize: 17, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginTop: 12 }}>
+                    {SUPERFICIES.map((s) => { const chosen = ACAB_POR_ID[amb.sel[s.key]]; return (
+                      <button key={s.key} type="button" onClick={() => setPkAcab({ idx, superficie: s.key })} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: chosen ? '2px solid var(--accent)' : '1px dashed var(--line)' }}>
+                        <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}>
+                          {chosen?.img ? <img src={chosen.img} alt={chosen.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : chosen ? <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink2)', padding: 8, textAlign: 'center' }}>{chosen.nome}</span> : <span className="muted" style={{ fontSize: 22 }}>+</span>}
+                        </div>
+                        <div style={{ padding: '7px 9px' }}>
+                          <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ink3)', fontWeight: 700 }}>{s.label}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, marginTop: 1, lineHeight: 1.15 }}>{chosen ? chosen.nome : 'Escolher'}</div>
+                        </div>
+                      </button>) })}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                    <button type="button" className="btn" onClick={() => concluirA(idx)} style={{ padding: '8px 18px', fontSize: 13.5 }}>✓ Concluir ambiente</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 9 }}>Adicionar ambiente</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {AMBIENTES_BASE.map((b) => <button key={b.tipo} type="button" onClick={() => addA(b.tipo, b.area)} style={{ border: '1px dashed var(--line)', borderRadius: 999, padding: '7px 13px', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, background: 'transparent', color: 'var(--ink2,#555)' }}>+ {b.tipo}</button>)}
+              </div>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, margin: '18px 0 8px' }}>Telhado</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
+              {telhadoOpts.map((t) => { const on = cobSel === t.id; return (
+                <button key={t.id} type="button" onClick={() => setCobSel(on ? null : t.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+                  <div style={{ aspectRatio: '4/3', background: '#eef2f5' }}>{t.img && <img src={t.img} alt={t.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
+                  <div style={{ padding: '7px 10px' }}><div style={{ fontSize: 12, fontWeight: 700 }}>{t.nome}</div><div className="muted" style={{ fontSize: 10.5 }}>{t.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'}</div></div>
+                </button>) })}
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, margin: '18px 0 8px' }}>Paisagismo <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· opcional</span></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
+              <button type="button" onClick={() => setPaisSel(null)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: !paisSel ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+                <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}><span className="muted" style={{ fontSize: 12 }}>Sem paisagismo</span></div>
+                <div style={{ padding: '7px 10px' }}><div style={{ fontSize: 12, fontWeight: 700 }}>Sem paisagismo</div></div>
+              </button>
+              {PAISAGISMOS.map((p) => { const on = paisSel === p.id; return (
+                <button key={p.id} type="button" onClick={() => setPaisSel(p.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+                  <div style={{ aspectRatio: '4/3', background: '#eef2f5' }}>{p.img && <img src={p.img} alt={p.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
+                  <div style={{ padding: '7px 10px' }}><div style={{ fontSize: 12, fontWeight: 700 }}>{p.nome}</div></div>
+                </button>) })}
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="card" style={{ padding: 18, marginBottom: 16 }}>
         <div className="sec-title" style={{ marginTop: 0 }}>Extras</div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -338,6 +472,41 @@ export default function OrcamentoWizard({ prefill }) {
         </div>
       </div>
       <button className="btn" style={{ padding: '12px 20px', fontSize: 14 }} onClick={avancar}>Gerar orçamento detalhado →</button>
+
+      {/* MODAL: escolha visual do acabamento */}
+      {pkAcab && (() => {
+        const s = SUPERFICIES.find((x) => x.key === pkAcab.superficie)
+        const amb = ambSel[pkAcab.idx]
+        if (!s || !amb) return null
+        return (
+          <div onClick={() => setPkAcab(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(10,8,6,.72)', zIndex: 60, display: 'grid', placeItems: 'center', padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: 18, width: 'min(860px,100%)', maxHeight: '88vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <div className="sec-title" style={{ margin: 0 }}>{s.label} · {amb.tipo}</div>
+                <button className="muted" onClick={() => setPkAcab(null)} style={{ fontSize: 20, cursor: 'pointer' }}>×</button>
+              </div>
+              <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>Clique na imagem do acabamento para este ambiente.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
+                {s.itens.map((it) => {
+                  const on = amb.sel[pkAcab.superficie] === it.id
+                  const un = pkAcab.superficie === 'esquadria' ? esquadAreaM2(amb.area) + ' m²' : Math.round((pkAcab.superficie === 'parede' ? 2.7 : 1) * amb.area) + ' m²'
+                  return (
+                    <button key={it.id} onClick={() => escolherA(it.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
+                      <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}>
+                        {it.img ? <img src={it.img} alt={it.nome} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontWeight: 700, color: 'var(--ink2)', textAlign: 'center', padding: 10, fontSize: 13 }}>{it.nome}</span>}
+                      </div>
+                      <div style={{ padding: '9px 11px' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{it.nome}</div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{it.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'} · {un}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 
