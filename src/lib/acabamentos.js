@@ -96,13 +96,20 @@ export const ESQ_PADRAO = 'esq-aluminio-branco-vidro'
 const L = (id, ambiente, nome, padrao, compra, mo, desc, img) =>
   ({ id, superficie: 'loucas', ambiente, nome, padrao, compra, mo, desc, img: img || null })
 export const LOUCAS = [
-  // --- BANHEIRO (inclui banheiro da suíte) ---
-  L('loucas-banheiro-medio', 'banheiro', 'Kit banheiro · Médio', 'medio', 1800, 0.18,
-    'Vaso com caixa acoplada, cuba de apoio, torneira de bancada, misturador de chuveiro, ducha higiênica e acessórios (papeleira, toalheiro).',
+  // --- BANHEIRO SOCIAL ---
+  L('loucas-banheiro-medio', 'banheiro', 'Kit banheiro · Médio', 'medio', 2600, 0.18,
+    'Vaso com caixa acoplada, cuba de apoio, torneira, chuveiro, ducha higiênica, box de vidro (blindex) e acessórios (papeleira, toalheiro).',
     ACABIMG['loucas-banheiro-medio']),
-  L('loucas-banheiro-alto', 'banheiro', 'Kit banheiro · Alto', 'alto', 4500, 0.18,
-    'Vaso suspenso com acionamento de embutir, cuba esculpida, torneira monocomando, chuveiro de teto, ducha premium e metais em cor (black / gold), acessórios premium.',
+  L('loucas-banheiro-alto', 'banheiro', 'Kit banheiro · Alto', 'alto', 6000, 0.18,
+    'Vaso suspenso, cuba esculpida, torneira monocomando, chuveiro de teto, ducha premium, box de vidro amplo, metais em cor (black / gold) e acessórios premium.',
     ACABIMG['loucas-banheiro-alto']),
+  // --- SUÍTE (banheiro da suíte, mais completo) ---
+  L('loucas-suite-medio', 'suite', 'Kit suíte · Médio', 'medio', 3400, 0.18,
+    'Bancada com cuba de apoio, torneira monocomando, vaso com caixa acoplada, chuveiro, ducha higiênica, box de vidro (blindex) amplo e acessórios.',
+    ACABIMG['loucas-suite-medio']),
+  L('loucas-suite-alto', 'suite', 'Kit suíte · Alto', 'alto', 7500, 0.18,
+    'Bancada ampla com cuba dupla, torneira monocomando em cor, vaso suspenso, chuveiro de teto + ducha manual, box de vidro amplo e acessórios premium.',
+    ACABIMG['loucas-suite-alto']),
   // --- LAVABO ---
   L('loucas-lavabo-medio', 'lavabo', 'Kit lavabo · Médio', 'medio', 1200, 0.18,
     'Vaso com caixa acoplada, cuba de apoio e torneira de bancada.',
@@ -132,7 +139,8 @@ LOUCAS.forEach((l) => { LOUCAS_POR_ID[l.id] = l })
 export function loucasCategoria(tipo) {
   const t = String(tipo || '').toLowerCase()
   if (t.includes('lavabo')) return 'lavabo'
-  if (t.includes('banheiro') || t.includes('suíte') || t.includes('suite')) return 'banheiro'
+  if (t.includes('suíte') || t.includes('suite')) return 'suite'
+  if (t.includes('banheiro')) return 'banheiro'
   if (t.includes('cozinha') || t.includes('gourmet')) return 'cozinha'
   if (t.includes('serviço') || t.includes('servico')) return 'servico'
   return null
