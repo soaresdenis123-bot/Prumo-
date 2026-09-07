@@ -10,7 +10,7 @@ import { ACABIMG } from './acab_img'
 import { precoVenda, MARGEM_PCT_PADRAO } from './custos'
 
 // coeficiente de consumo por m² de ambiente
-export const COEF = { piso: 1.0, teto: 1.0, parede: 2.7, esquadria: 0.15 } // esquadria: m² de vão ≈ 15% da área do piso
+export const COEF = { piso: 1.0, teto: 1.0, parede: 2.7, esquadria: 0.15, loucas: 1 } // esquadria: m² de vão ≈ 15% da área do piso; loucas: 1 conjunto (kit) por ambiente
 
 // A = item de acabamento. compra em R$/unidade; mo = mão de obra como % do material.
 const A = (id, superficie, nome, padrao, compra, mo, img) => ({ id, superficie, nome, padrao, compra, mo, img: img || null })
@@ -88,6 +88,64 @@ export const ESQ_DORMITORIO_PADRAO = 'esq-aluminio-branco-persiana'
 // id da esquadria padrão para demais ambientes (mais barata)
 export const ESQ_PADRAO = 'esq-aluminio-branco-vidro'
 
+// ---- LOUÇAS E METAIS (conjunto/kit fixo por ambiente; NÃO escala por m²) ----
+// Cada kit é um conjunto pronto para um ambiente de água (banheiro/suíte, lavabo,
+// cozinha, área de serviço). 2 níveis por ambiente: Médio e Alto padrão.
+// `ambiente` = categoria de água que recebe o kit (usada para filtrar por cômodo).
+// `desc` = o que compõe o conjunto (mostrado no card). compra + mo → venda.
+const L = (id, ambiente, nome, padrao, compra, mo, desc, img) =>
+  ({ id, superficie: 'loucas', ambiente, nome, padrao, compra, mo, desc, img: img || null })
+export const LOUCAS = [
+  // --- BANHEIRO (inclui banheiro da suíte) ---
+  L('loucas-banheiro-medio', 'banheiro', 'Kit banheiro · Médio', 'medio', 1800, 0.18,
+    'Vaso com caixa acoplada, cuba de apoio, torneira de bancada, misturador de chuveiro, ducha higiênica e acessórios (papeleira, toalheiro).',
+    ACABIMG['loucas-banheiro-medio']),
+  L('loucas-banheiro-alto', 'banheiro', 'Kit banheiro · Alto', 'alto', 4500, 0.18,
+    'Vaso suspenso com acionamento de embutir, cuba esculpida, torneira monocomando, chuveiro de teto, ducha premium e metais em cor (black / gold), acessórios premium.',
+    ACABIMG['loucas-banheiro-alto']),
+  // --- LAVABO ---
+  L('loucas-lavabo-medio', 'lavabo', 'Kit lavabo · Médio', 'medio', 1200, 0.18,
+    'Vaso com caixa acoplada, cuba de apoio e torneira de bancada.',
+    ACABIMG['loucas-lavabo-medio']),
+  L('loucas-lavabo-alto', 'lavabo', 'Kit lavabo · Alto', 'alto', 3000, 0.18,
+    'Vaso suspenso, cuba diferenciada (esculpida) e torneira monocomando em cor.',
+    ACABIMG['loucas-lavabo-alto']),
+  // --- COZINHA (inclui cozinha gourmet) ---
+  L('loucas-cozinha-medio', 'cozinha', 'Kit cozinha · Médio', 'medio', 900, 0.16,
+    'Cuba de inox, torneira de cozinha (bica alta) e válvula.',
+    ACABIMG['loucas-cozinha-medio']),
+  L('loucas-cozinha-alto', 'cozinha', 'Kit cozinha · Alto', 'alto', 2500, 0.16,
+    'Cuba gourmet dupla, torneira gourmet articulada / monocomando e purificador na bancada.',
+    ACABIMG['loucas-cozinha-alto']),
+  // --- ÁREA DE SERVIÇO ---
+  L('loucas-servico-medio', 'servico', 'Kit área de serviço · Médio', 'medio', 500, 0.16,
+    'Tanque e torneira de tanque.',
+    ACABIMG['loucas-servico-medio']),
+  L('loucas-servico-alto', 'servico', 'Kit área de serviço · Alto', 'alto', 1200, 0.16,
+    'Cuba com bancada e torneira monocomando.',
+    ACABIMG['loucas-servico-alto']),
+]
+export const LOUCAS_POR_ID = {}
+LOUCAS.forEach((l) => { LOUCAS_POR_ID[l.id] = l })
+
+// mapeia o tipo do cômodo -> categoria de kit de louças (null = ambiente seco, sem kit)
+export function loucasCategoria(tipo) {
+  const t = String(tipo || '').toLowerCase()
+  if (t.includes('lavabo')) return 'lavabo'
+  if (t.includes('banheiro') || t.includes('suíte') || t.includes('suite')) return 'banheiro'
+  if (t.includes('cozinha') || t.includes('gourmet')) return 'cozinha'
+  if (t.includes('serviço') || t.includes('servico')) return 'servico'
+  return null
+}
+// kits de louças disponíveis para um tipo de ambiente (vazio = ambiente seco)
+export function loucasParaAmbiente(tipo) {
+  const cat = loucasCategoria(tipo)
+  if (!cat) return []
+  return LOUCAS.filter((l) => l.ambiente === cat)
+}
+// true se o ambiente recebe kit de louças/metais
+export const ambienteTemLoucas = (tipo) => !!loucasCategoria(tipo)
+
 // ---- TELHADO / COBERTURA (R$/m² de telhado; área ≈ projeção × 1,25) ----
 const T = (id, nome, padrao, compra, mo, img, platibanda = false) => ({ id, nome, padrao, compra, mo, img: img || null, platibanda })
 export const TELHADOS = [
@@ -121,7 +179,20 @@ export const SUPERFICIES = [
   { key: 'parede', label: 'Paredes', itens: PAREDES },
   { key: 'teto', label: 'Teto / forro', itens: TETOS },
   { key: 'esquadria', label: 'Esquadrias', itens: ESQUADRIAS },
+  { key: 'loucas', label: 'Louças e metais', itens: LOUCAS, soAgua: true }, // só ambientes de água
 ]
+
+// superfícies aplicáveis a um tipo de ambiente (louças só em ambientes de água)
+export function superficiesParaAmbiente(tipo) {
+  return SUPERFICIES.filter((s) => {
+    if (!s.soAgua) return true
+    return ambienteTemLoucas(tipo)
+  }).map((s) => {
+    // para louças, o card mostra só os kits daquele ambiente
+    if (s.key === 'loucas') return { ...s, itens: loucasParaAmbiente(tipo) }
+    return s
+  })
+}
 
 // índice id -> item (para admin e orçamento reconstruírem a seleção)
 export const ACAB_POR_ID = {}
@@ -140,6 +211,8 @@ export function custoSuperficie(superficie, it, area, margem = MARGEM_PCT_PADRAO
   if (!it) return 0
   const a = Number(area) || 0
   const v = vendaItem(it, margem)
+  // louças/metais = 1 conjunto (kit) por ambiente, não escala pela área
+  if (superficie === 'loucas') return v
   // esquadria também escala por m² (COEF.esquadria = m² de vão ≈ 15% do piso)
   return (COEF[superficie] || 1) * a * v
 }

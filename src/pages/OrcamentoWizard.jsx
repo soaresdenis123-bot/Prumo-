@@ -2,30 +2,32 @@ import { useState, useEffect, Fragment } from 'react'
 import { BRL, saveOrcamento, listProdutosComFornecedor, listObras } from '../lib/data'
 import { SERVICOS, areaDosComodos } from '../lib/precificacao'
 import { MO_PCT_PADRAO, MO_MIN, MO_MAX, MARGEM_PCT_PADRAO, custoInstalado, precoVenda, margemDe } from '../lib/custos'
-import { parseSelecoes, ACAB_POR_ID, COEF, esquadAreaM2, SUPERFICIES, AMBIENTES_BASE,
+import { parseSelecoes, ACAB_POR_ID, COEF, esquadAreaM2, SUPERFICIES, superficiesParaAmbiente, AMBIENTES_BASE,
   ESQ_DORMITORIO_PADRAO, ESQ_PADRAO, telhadosDisponiveis, TELHADOS_POR_ID, PAISAGISMOS, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
 
 let ACID = 1 // id incremental dos ambientes montados no wizard
 
 // grupo do orçamento gerado a partir do que o cliente escolheu no "Monte sua casa"
-const SUP_LABEL = { piso: 'Piso', parede: 'Paredes', teto: 'Teto', esquadria: 'Esquadrias' }
-const SUP_CAT = { piso: 'Revestimento', parede: 'Revestimento', teto: 'Acabamento', esquadria: 'Esquadrias' }
+const SUP_LABEL = { piso: 'Piso', parede: 'Paredes', teto: 'Teto', esquadria: 'Esquadrias', loucas: 'Louças e metais' }
+const SUP_CAT = { piso: 'Revestimento', parede: 'Revestimento', teto: 'Acabamento', esquadria: 'Esquadrias', loucas: 'Louças/Metais' }
 function gerarAcabamentosCliente(selecoes) {
   const itens = []
   selecoes.forEach((a) => {
-    ;['piso', 'parede', 'teto', 'esquadria'].forEach((sup) => {
+    ;['piso', 'parede', 'teto', 'esquadria', 'loucas'].forEach((sup) => {
       const it = ACAB_POR_ID[a.sel?.[sup]]
       if (!it) return
       const area = Number(a.area) || 0
-      const qty = sup === 'esquadria' ? esquadAreaM2(area) : Math.max(1, Math.round((COEF[sup] || 1) * area))
-      const un = 'm²'
+      // louças/metais = 1 conjunto (kit) por ambiente; demais escalam por m²
+      const qty = sup === 'loucas' ? 1 : (sup === 'esquadria' ? esquadAreaM2(area) : Math.max(1, Math.round((COEF[sup] || 1) * area)))
+      const un = sup === 'loucas' ? 'cj' : 'm²'
       const preco = Math.round(custoInstalado(it.compra, it.mo)) // custo material + mão de obra
       itens.push({ ...AU(`${a.tipo} · ${SUP_LABEL[sup]}: ${it.nome}`, un, qty, preco, '', true, SUP_CAT[sup]), qtd: qty })
     })
   })
   return { nome: 'Acabamentos escolhidos pelo cliente', itens }
 }
-const ACAB_GROUPS = ['Revestimento', 'Acabamento', 'Esquadrias']
+// grupos que o cliente já escolheu (removidos do detalhamento interno pra não duplicar)
+const ACAB_GROUPS = ['Revestimento', 'Acabamento', 'Esquadrias', 'Louças/Metais']
 import PlumbMark from '../components/PlumbMark'
 
 /* =========================================================================
@@ -398,7 +400,7 @@ export default function OrcamentoWizard({ prefill }) {
                 <div key={amb.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 700, fontSize: 14, minWidth: 110 }}>✓ {amb.tipo} <span className="muted" style={{ fontWeight: 400 }}>· {amb.area} m²</span></div>
                   <div style={{ display: 'flex', gap: 5 }}>
-                    {SUPERFICIES.map((s) => { const it = ACAB_POR_ID[amb.sel[s.key]]; return (
+                    {superficiesParaAmbiente(amb.tipo).map((s) => { const it = ACAB_POR_ID[amb.sel[s.key]]; return (
                       <div key={s.key} title={s.label + (it ? ': ' + it.nome : '')} style={{ width: 32, height: 32, borderRadius: 7, overflow: 'hidden', background: '#f0ece4', border: '1px solid var(--line)' }}>
                         {it?.img && <img src={it.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                       </div>) })}
@@ -422,7 +424,7 @@ export default function OrcamentoWizard({ prefill }) {
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginTop: 12 }}>
-                    {SUPERFICIES.map((s) => { const chosen = ACAB_POR_ID[amb.sel[s.key]]; return (
+                    {superficiesParaAmbiente(amb.tipo).map((s) => { const chosen = ACAB_POR_ID[amb.sel[s.key]]; return (
                       <button key={s.key} type="button" onClick={() => setPkAcab({ idx, superficie: s.key })} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: chosen ? '2px solid var(--accent)' : '1px dashed var(--line)' }}>
                         <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}>
                           {chosen?.img ? <img src={chosen.img} alt={chosen.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : chosen ? <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink2)', padding: 8, textAlign: 'center' }}>{chosen.nome}</span> : <span className="muted" style={{ fontSize: 22 }}>+</span>}
@@ -484,9 +486,10 @@ export default function OrcamentoWizard({ prefill }) {
 
       {/* MODAL: escolha visual do acabamento */}
       {pkAcab && (() => {
-        const s = SUPERFICIES.find((x) => x.key === pkAcab.superficie)
         const amb = ambSel[pkAcab.idx]
-        if (!s || !amb) return null
+        if (!amb) return null
+        const s = superficiesParaAmbiente(amb.tipo).find((x) => x.key === pkAcab.superficie)
+        if (!s) return null
         return (
           <div onClick={() => setPkAcab(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(10,8,6,.72)', zIndex: 60, display: 'grid', placeItems: 'center', padding: 16 }}>
             <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: 18, width: 'min(860px,100%)', maxHeight: '88vh', overflowY: 'auto' }}>
@@ -498,7 +501,7 @@ export default function OrcamentoWizard({ prefill }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
                 {s.itens.map((it) => {
                   const on = amb.sel[pkAcab.superficie] === it.id
-                  const un = pkAcab.superficie === 'esquadria' ? esquadAreaM2(amb.area) + ' m²' : Math.round((pkAcab.superficie === 'parede' ? 2.7 : 1) * amb.area) + ' m²'
+                  const un = pkAcab.superficie === 'loucas' ? 'conjunto' : (pkAcab.superficie === 'esquadria' ? esquadAreaM2(amb.area) + ' m²' : Math.round((pkAcab.superficie === 'parede' ? 2.7 : 1) * amb.area) + ' m²')
                   return (
                     <button key={it.id} onClick={() => escolherA(it.id)} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: on ? '2px solid var(--accent)' : '1px solid var(--line)' }}>
                       <div style={{ aspectRatio: '4/3', background: '#f0ece4', display: 'grid', placeItems: 'center' }}>
@@ -507,6 +510,7 @@ export default function OrcamentoWizard({ prefill }) {
                       <div style={{ padding: '9px 11px' }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{it.nome}</div>
                         <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{it.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'} · {un}</div>
+                        {it.desc && <div className="muted" style={{ fontSize: 11, marginTop: 5, lineHeight: 1.3 }}>{it.desc}</div>}
                       </div>
                     </button>
                   )

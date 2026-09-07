@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { salvarLeadProjeto } from '../lib/data'
 import { MODELOS } from '../lib/modelos'
-import { SUPERFICIES, AMBIENTES_BASE, ACAB_POR_ID, custoSuperficie, vendaItem, esquadAreaM2,
+import { SUPERFICIES, superficiesParaAmbiente, AMBIENTES_BASE, ACAB_POR_ID, custoSuperficie, vendaItem, esquadAreaM2,
   ESQ_DORMITORIO_PADRAO, ESQ_PADRAO,
   TELHADOS_POR_ID, telhadosDisponiveis, areaTelhado, PAISAGISMOS, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
 import { brl } from '../lib/precificacao'
@@ -183,7 +183,7 @@ export default function MonteSuaCasa() {
               <div key={amb.id} style={{ border: '1px solid var(--line)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                 <div style={{ fontWeight: 700, fontSize: 14.5, minWidth: 120 }}><span style={{ color: 'var(--ok,#55604A)' }}>✓</span> {amb.tipo} <span className="muted" style={{ fontWeight: 400 }}>· {amb.area} m²</span></div>
                 <div style={{ display: 'flex', gap: 5 }}>
-                  {SUPERFICIES.map((s) => { const it = ACAB_POR_ID[amb.sel[s.key]]; return (
+                  {superficiesParaAmbiente(amb.tipo).map((s) => { const it = ACAB_POR_ID[amb.sel[s.key]]; return (
                     <div key={s.key} title={s.label + (it ? ': ' + it.nome : '')} style={{ width: 34, height: 34, borderRadius: 7, overflow: 'hidden', background: '#f0ece4', border: '1px solid var(--line)' }}>
                       {it?.img && <img src={it.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                     </div>
@@ -211,7 +211,7 @@ export default function MonteSuaCasa() {
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginTop: 12 }}>
-                  {SUPERFICIES.map((s) => {
+                  {superficiesParaAmbiente(amb.tipo).map((s) => {
                     const chosen = ACAB_POR_ID[amb.sel[s.key]]
                     return (
                       <button key={s.key} type="button" onClick={() => setPicker({ idx, superficie: s.key })} className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left', border: chosen ? '2px solid var(--accent)' : '1px dashed var(--line)' }}>
@@ -308,8 +308,9 @@ export default function MonteSuaCasa() {
 
       {/* MODAL: escolha visual do material */}
       {picker && (() => {
-        const s = SUPERFICIES.find((x) => x.key === picker.superficie)
         const amb = ambientes[picker.idx]
+        const s = superficiesParaAmbiente(amb.tipo).find((x) => x.key === picker.superficie)
+        if (!s) return null
         return (
           <div onClick={() => setPicker(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(10,8,6,.72)', zIndex: 60, display: 'grid', placeItems: 'center', padding: 16 }}>
             <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: 18, width: 'min(860px,100%)', maxHeight: '88vh', overflowY: 'auto' }}>
@@ -330,7 +331,8 @@ export default function MonteSuaCasa() {
                       </div>
                       <div style={{ padding: '9px 11px' }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{it.nome}</div>
-                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{it.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'}</div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{it.padrao === 'alto' ? 'Alto padrão' : 'Médio padrão'}{picker.superficie === 'loucas' ? ' · conjunto completo' : ''}</div>
+                        {it.desc && <div className="muted" style={{ fontSize: 11, marginTop: 5, lineHeight: 1.3 }}>{it.desc}</div>}
                       </div>
                     </button>
                   )
