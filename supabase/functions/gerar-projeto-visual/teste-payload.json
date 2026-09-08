@@ -1,0 +1,25 @@
+{
+  "leadId": "teste-aurora",
+  "items": [
+    {
+      "key": "suite",
+      "prompt": "wide-angle interior photo of a master suite bedroom with a large bed, integrated wardrobe and an en-suite feel. floor: polished marble-look porcelain floor, white with soft grey veining, walls: microcement wall finish, seamless warm grey, ceiling: plaster ceiling with cove lighting (sanca) and warm LED strip, windows/doors: dark-framed aluminium windows with integrated shutter, fixtures: double-basin marble vanity, brushed-gold fixtures, ceiling rain shower, large walk-in glass shower box. high-end upscale Brazilian residential interior, sophisticated, magazine-quality. realistic photograph, soft natural daylight, shallow depth of field, architectural interior photography, 4:3, no people, no text, no watermark"
+    },
+    {
+      "key": "banheiro",
+      "prompt": "wide-angle interior photo of a bathroom with vanity, toilet, glass shower enclosure and shower. floor: large-format rectified porcelain floor, seamless grout lines, walls: cementitious wall cladding, contemporary grey, ceiling: flat smooth plaster ceiling, windows/doors: white aluminium framed glass window, fixtures: chrome fixtures, wall-mounted toilet with cistern, vessel basin, glass shower box, hand shower. high-end upscale Brazilian residential interior, sophisticated, magazine-quality. realistic photograph, soft natural daylight, shallow depth of field, architectural interior photography, 4:3, no people, no text, no watermark"
+    },
+    {
+      "key": "cozinha",
+      "prompt": "wide-angle interior photo of a kitchen with cabinetry, countertop, sink and appliances. floor: large satin-finish porcelain floor tiles, soft light beige, walls: ceramic wall tiles, ceiling: flat smooth plaster ceiling, windows/doors: black-framed aluminium glass window, fixtures: double stainless sink, gooseneck gourmet faucet, countertop water purifier. high-end upscale Brazilian residential interior, sophisticated, magazine-quality. realistic photograph, soft natural daylight, shallow depth of field, architectural interior photography, 4:3, no people, no text, no watermark"
+    },
+    {
+      "key": "sala",
+      "prompt": "wide-angle interior photo of a living room with a sofa, rug and contemporary furniture. floor: polished marble-look porcelain floor, white with soft grey veining, walls: slatted wood (ripado) accent wall panel, warm tone, ceiling: plaster ceiling with cove lighting (sanca) and warm LED strip, windows/doors: large minimal-frame sliding glass doors, floor to ceiling. high-end upscale Brazilian residential interior, sophisticated, magazine-quality. realistic photograph, soft natural daylight, shallow depth of field, architectural interior photography, 4:3, no people, no text, no watermark"
+    },
+    {
+      "key": "quarto",
+      "prompt": "wide-angle interior photo from the doorway of a modern bedroom with a made double bed, bedside tables and soft styling. floor: warm wood-look SPC vinyl plank flooring, walls: smooth satin painted walls, soft neutral, ceiling: flat smooth plaster ceiling, windows/doors: white aluminium windows with integrated roller shutter. high-end upscale Brazilian residential interior, sophisticated, magazine-quality. realistic photograph, soft natural daylight, shallow depth of field, architectural interior photography, 4:3, no people, no text, no watermark"
+    }
+  ]
+}
