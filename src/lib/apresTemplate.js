@@ -24,7 +24,7 @@ export function montarApresHTML(cfg = {}) {
     primeiroNome = '', modeloNome = 'a sua casa', renderSrc = '', provisorio = true,
     specTipo = '', specPadrao = '', specPrograma = '', specExtras = '', specArea = '',
     precoLabel = '', pickPiso = '', pickCobertura = '', pickEsquadria = '', cidade = 'Montenegro/RS',
-    comercial = false, projetoVisual = [],
+    comercial = false, projetoVisual = [], baseHref = '',
   } = cfg
 
   // ---- projeto visual: foto IA de cada ambiente conforme a seleção do cliente ----
@@ -92,6 +92,7 @@ export function montarApresHTML(cfg = {}) {
     </div>` : ''
 
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+${baseHref ? `<base href="${esc(baseHref)}/">` : ''}
 <title>${esc(primeiroNome || 'Cliente')} · A sua casa em movimento · MS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

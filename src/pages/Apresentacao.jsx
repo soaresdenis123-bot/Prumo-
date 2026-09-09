@@ -66,8 +66,10 @@ function montarConfig(lead) {
   // fotos IA por ambiente (só as que geraram com sucesso)
   const projetoVisual = Array.isArray(apres.projetoVisual) ? apres.projetoVisual.filter((p) => p && p.url) : []
 
+  const baseHref = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : ''
+
   return { familia, primeiroNome, modeloNome, renderSrc, provisorio, specTipo, specPadrao,
-    specPrograma, specExtras, specArea, precoLabel, pickPiso, pickCobertura, pickEsquadria, cidade: lead?.cidade, projetoVisual }
+    specPrograma, specExtras, specArea, precoLabel, pickPiso, pickCobertura, pickEsquadria, cidade: lead?.cidade, projetoVisual, baseHref }
 }
 
 export default function Apresentacao() {
