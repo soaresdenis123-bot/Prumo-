@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listLeadsProjeto, updateLead, deleteLead, uploadApresRender, salvarApres } from '../lib/data'
+import { listLeadsProjeto, updateLead, deleteLead, uploadApresRender, salvarApres, gerarProjetoVisual } from '../lib/data'
+import { montarPromptAmbiente } from '../lib/roomPrompt'
 import { MODELO_IMG } from '../lib/modelos'
 import { parseSelecoes, SUPERFICIES, ACAB_POR_ID, custoSuperficie } from '../lib/acabamentos'
 import { brl } from '../lib/precificacao'
@@ -54,6 +55,28 @@ export default function Clientes() {
   async function salvarFamilia(v) {
     const novo = await salvarApres(apres.id, apres.apres, { familia: v || null })
     setApres({ ...apres, apres: novo }); load()
+  }
+  // ---- projeto visual (fotos IA por ambiente) ----
+  const slugAmb = (tipo, i) => `${String(tipo || 'amb').toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${i}`
+  async function gerarPV() {
+    if (!apres) return
+    const sel = parseSelecoes(apres.obs)
+    const ambientes = sel?.ambientes || []
+    if (!ambientes.length) { alert('Este cliente ainda não tem ambientes selecionados.'); return }
+    const padrao = String(sel.padrao || '').includes('alto') ? 'alto' : 'medio'
+    const items = ambientes.map((amb, i) => ({ key: slugAmb(amb.tipo, i), prompt: montarPromptAmbiente(amb, { padrao }).prompt }))
+    const jaTem = Array.isArray(apres.apres?.projetoVisual) && apres.apres.projetoVisual.length
+    if (!window.confirm(`Gerar as fotos de ${items.length} ambiente(s) deste cliente?\n\nAmbientes sem mudança na seleção não são gerados de novo (não custa).${jaTem ? '\nIsto atualiza o projeto visual atual.' : ''}\n\nLeva ~1 a 3 minutos.`)) return
+    setApresBusy('pv')
+    try {
+      const res = await gerarProjetoVisual(apres.id, items)
+      const byKey = {}; (res.images || []).forEach((im) => { byKey[im.key] = im.url })
+      const projetoVisual = ambientes.map((amb, i) => { const key = slugAmb(amb.tipo, i); return { key, tipo: amb.tipo, area: amb.area, url: byKey[key] || null } })
+      const novo = await salvarApres(apres.id, apres.apres, { projetoVisual })
+      setApres({ ...apres, apres: novo }); load()
+      if (res.erros?.length) alert('Alguns ambientes falharam:\n' + res.erros.map((e) => `${e.key}: ${e.erro}`).join('\n'))
+    } catch (e) { alert('Erro ao gerar o projeto visual: ' + (e.message || e)) }
+    setApresBusy('')
   }
   function copiarLink(l) {
     const url = apresLink(l); if (!url) return
@@ -260,6 +283,25 @@ export default function Clientes() {
                         </label>
                       </div>
                     )}
+                  </div>
+
+                  <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+                    <label style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--ink3)', fontWeight: 700 }}>Projeto visual · foto de cada ambiente (IA)</label>
+                    <div className="muted" style={{ fontSize: 11.5, margin: '4px 0 8px' }}>Gera uma foto realista de cada cômodo conforme os acabamentos que o cliente escolheu. Imagens ilustrativas.</div>
+                    {Array.isArray(a.projetoVisual) && a.projetoVisual.length > 0 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(88px,1fr))', gap: 8, marginBottom: 10 }}>
+                        {a.projetoVisual.map((p) => (
+                          <div key={p.key} title={`${p.tipo} · ${p.area} m²`} style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)', background: '#f0ece4' }}>
+                            {p.url ? <img src={p.url} alt={p.tipo} style={{ width: '100%', aspectRatio: '3/2', objectFit: 'cover', display: 'block' }} />
+                              : <div style={{ aspectRatio: '3/2', display: 'grid', placeItems: 'center', fontSize: 10, color: 'var(--crit,#b23)' }}>falhou</div>}
+                            <div style={{ fontSize: 9.5, padding: '3px 5px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.tipo}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button className="btn ghost" style={{ fontSize: 12, padding: '7px 12px' }} disabled={apresBusy === 'pv'} onClick={gerarPV}>
+                      {apresBusy === 'pv' ? 'Gerando fotos… (pode levar 1–3 min)' : (Array.isArray(a.projetoVisual) && a.projetoVisual.length ? '↻ Regenerar projeto visual' : '✨ Gerar projeto visual')}
+                    </button>
                   </div>
 
                   <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 16 }}>

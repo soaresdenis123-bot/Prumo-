@@ -63,8 +63,11 @@ function montarConfig(lead) {
 
   const familia = apres.familia ? `Proposta exclusiva · ${apres.familia}` : 'Proposta exclusiva'
 
+  // fotos IA por ambiente (só as que geraram com sucesso)
+  const projetoVisual = Array.isArray(apres.projetoVisual) ? apres.projetoVisual.filter((p) => p && p.url) : []
+
   return { familia, primeiroNome, modeloNome, renderSrc, provisorio, specTipo, specPadrao,
-    specPrograma, specExtras, specArea, precoLabel, pickPiso, pickCobertura, pickEsquadria, cidade: lead?.cidade }
+    specPrograma, specExtras, specArea, precoLabel, pickPiso, pickCobertura, pickEsquadria, cidade: lead?.cidade, projetoVisual }
 }
 
 export default function Apresentacao() {

@@ -512,6 +512,17 @@ export async function uploadApresRender(leadId, file) {
   const { data } = supabase.storage.from('catalogo').getPublicUrl(path)
   return data?.publicUrl || null
 }
+// gera as fotos de cada ambiente (IA) via Edge Function e devolve [{key,url,cached}]
+// items = [{ key, prompt, negative? }] vindos do roomPrompt
+export async function gerarProjetoVisual(leadId, items) {
+  const { data, error } = await supabase.functions.invoke('gerar-projeto-visual', {
+    body: { leadId: String(leadId), items },
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data // { images:[{key,url,cached}], erros? }
+}
+
 // grava/atualiza o bloco de overrides da apresentação (merge no jsonb apres)
 export async function salvarApres(leadId, apresAtual, patch) {
   const novo = { ...(apresAtual || {}), ...patch }

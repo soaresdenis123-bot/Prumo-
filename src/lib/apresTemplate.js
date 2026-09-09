@@ -24,9 +24,38 @@ export function montarApresHTML(cfg = {}) {
     primeiroNome = '', modeloNome = 'a sua casa', renderSrc = '', provisorio = true,
     specTipo = '', specPadrao = '', specPrograma = '', specExtras = '', specArea = '',
     precoLabel = '', pickPiso = '', pickCobertura = '', pickEsquadria = '', cidade = 'Montenegro/RS',
+    comercial = false, projetoVisual = [],
   } = cfg
 
+  // ---- projeto visual: foto IA de cada ambiente conforme a seleção do cliente ----
+  const pvSection = (!comercial && Array.isArray(projetoVisual) && projetoVisual.length) ? `
+<section class="gal" id="s4b">
+  <div class="wrap">
+    <div class="eyebrow rv">O seu projeto, ambiente por ambiente</div>
+    <h2 class="rv d1" style="margin-top:14px;max-width:22ch">Cada cômodo, do jeito que <span class="amber">você escolheu</span>.</h2>
+    <div class="rv d2" style="margin-top:26px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px">
+      ${projetoVisual.map((p) => `<figure style="margin:0;border-radius:14px;overflow:hidden;background:#efe7d7;border:1px solid rgba(0,0,0,.06)">
+        <img src="${esc(p.url)}" alt="${esc(p.tipo || 'Ambiente')}" loading="lazy" style="width:100%;aspect-ratio:3/2;object-fit:cover;display:block">
+        <figcaption style="padding:11px 13px;font-size:13.5px;font-weight:600">${esc(p.tipo || 'Ambiente')}${p.area ? ` · ${esc(String(p.area))} m²` : ''}</figcaption>
+      </figure>`).join('')}
+    </div>
+    <p class="src rv" style="margin-top:16px">Imagens ilustrativas, geradas a partir dos acabamentos que você escolheu para cada ambiente.</p>
+  </div>
+</section>` : ''
+
   const nomeHero = primeiroNome ? esc(primeiroNome) + ',' : 'A sua casa,'
+  // ---- variantes do modo comercial (institucional, sem cliente) ----
+  const heroTag = comercial ? 'Casas inteligentes em Steel Frame' : esc(familia)
+  const heroLines = comercial
+    ? `<span class="ln"><i>A sua casa</i></span>
+      <span class="ln"><i>dos sonhos,</i></span>
+      <span class="ln"><i style="color:var(--amber2)">em movimento.</i></span>`
+    : `<span class="ln"><i>${nomeHero}</i></span>
+      <span class="ln"><i>a sua casa</i></span>
+      <span class="ln"><i style="color:var(--amber2)">em movimento.</i></span>`
+  const heroLead = comercial
+    ? 'Do projeto à chave, com engenharia de verdade. Role e veja como a sua casa deixa de ser sonho e vira realidade, no prazo e no preço combinados.'
+    : 'Você escolheu construir. A partir daqui, cada linha, cada material e cada data são seus. Role e veja a sua casa deixar de ser sonho e virar projeto.'
   const galRow = (ids) => ids.map((id) => `<figure><img src="/modelos/${id}.jpg" alt="Modelo MS" loading="lazy"></figure>`).join('')
   const matRow = (ids) => ids.map((id) => `<figure><img src="/acab/${id}.jpg" alt="Amostra de acabamento" loading="lazy"></figure>`).join('')
   const row1 = MODELOS_IDS.slice(0, 8), row2 = MODELOS_IDS.slice(8)
@@ -199,13 +228,11 @@ section{position:relative;padding:120px 26px;overflow:hidden}
   <div class="bg" data-par="0.25" style="background-image:url('/apres/cover.jpg')"></div>
   <div class="veil"></div><div class="sweep"></div>
   <div class="wrap">
-    <div class="tagfam rv">${esc(familia)}</div>
+    <div class="tagfam rv">${heroTag}</div>
     <h1 class="kin" style="margin-top:22px">
-      <span class="ln"><i>${nomeHero}</i></span>
-      <span class="ln"><i>a sua casa</i></span>
-      <span class="ln"><i style="color:var(--amber2)">em movimento.</i></span>
+      ${heroLines}
     </h1>
-    <p class="lead rv d3" style="margin-top:26px;color:#E7DECB">Você escolheu construir. A partir daqui, cada linha, cada material e cada data são seus. Role e veja a sua casa deixar de ser sonho e virar projeto.</p>
+    <p class="lead rv d3" style="margin-top:26px;color:#E7DECB">${heroLead}</p>
   </div>
 </section>
 
@@ -235,7 +262,29 @@ section{position:relative;padding:120px 26px;overflow:hidden}
   <div class="wrap" style="margin-top:26px"><p class="lead rv">Do básico ao alto padrão. Da casa de campo à arquitetura moderna. Engenharia com tecnologia, para realizar o seu sonho.</p></div>
 </section>
 
-<section class="casa" id="s4">
+${comercial ? `<section class="casa" id="s4">
+  <div class="wrap">
+    <div class="eyebrow rv">A sua casa, do seu jeito</div>
+    <h2 class="rv d1" style="margin-top:14px">Escolha o modelo. <span class="amber">A gente constrói.</span></h2>
+    <div class="two" style="margin-top:38px">
+      <div class="frame rv d1"><img src="/modelos/m14.jpg" alt="Casa MS"></div>
+      <div class="rv d2">
+        <div class="spec">
+          <div class="r"><span class="k">Padrões</span><span class="v">Médio e alto padrão</span></div>
+          <div class="r"><span class="k">Estilos</span><span class="v">Do campo à arquitetura moderna</span></div>
+          <div class="r"><span class="k">Entrega</span><span class="v">Chave na mão</span></div>
+          <div class="r"><span class="k">Garantia</span><span class="v">Com ART, dentro da NBR 16970</span></div>
+        </div>
+        <div class="price">
+          <div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700">O que a MS garante</div>
+          <div class="n" style="margin-top:8px">Preço e prazo fechados</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">Você sabe quanto custa e quando fica pronta antes de começar. Steel frame é financiável.</div>
+        </div>
+      </div>
+    </div>
+    <p class="src rv">São 16 modelos no portfólio, e cada um vira a sua casa: no seu terreno, com os seus acabamentos.</p>
+  </div>
+</section>` : `<section class="casa" id="s4">
   <div class="wrap">
     <div class="eyebrow rv">A casa que você escolheu no pré-projeto</div>
     <h2 class="rv d1" style="margin-top:14px">A sua <span class="amber">${esc(modeloNome)}</span>.</h2>
@@ -248,8 +297,9 @@ section{position:relative;padding:120px 26px;overflow:hidden}
     </div>
     ${srcNote}
   </div>
-</section>
+</section>`}
 
+${pvSection}
 <section id="s5">
   <div class="wrap">
     <div class="eyebrow rv">Do papel à chave, com data</div>
