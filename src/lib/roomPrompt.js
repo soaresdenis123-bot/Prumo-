@@ -53,13 +53,13 @@ const MAT = {
   'teto-forro-pvc': 'clean PVC lining ceiling',
   'teto-forro-wpc': 'WPC wood-look slatted ceiling',
   // esquadrias
-  'esq-aluminio-branco-persiana': 'white aluminium windows with integrated roller shutter',
-  'esq-pvc-persiana': 'white PVC windows with integrated shutter',
-  'esq-aluminio-cor-persiana': 'dark-framed aluminium windows with integrated shutter',
-  'esq-aluminio-branco-vidro': 'white aluminium framed glass window',
-  'esq-pvc-vidro': 'white PVC framed glass window',
-  'esq-aluminio-cor-vidro': 'black-framed aluminium glass window',
-  'esq-vidro-correr-minimal': 'large minimal-frame sliding glass doors, floor to ceiling',
+  'esq-aluminio-branco-persiana': 'white-framed aluminium sliding window with a built-in white roller shutter (persiana)',
+  'esq-pvc-persiana': 'white PVC-framed window with a built-in roller shutter (persiana)',
+  'esq-aluminio-cor-persiana': 'dark/black-framed aluminium sliding window with a built-in roller shutter (persiana)',
+  'esq-aluminio-branco-vidro': 'white-framed aluminium glass window',
+  'esq-pvc-vidro': 'white PVC-framed glass window',
+  'esq-aluminio-cor-vidro': 'black-framed aluminium glass window (slim black frame clearly visible)',
+  'esq-vidro-correr-minimal': 'large floor-to-ceiling minimal-frame sliding glass door with a very slim black frame',
 }
 
 // ---- base de cada ambiente: o que precisa aparecer na cena ----
@@ -114,14 +114,20 @@ export function montarPromptAmbiente(amb, opts = {}) {
   if (piso) partes.push(`floor: ${piso}`)
   if (parede) partes.push(`walls: ${parede}`)
   if (teto) partes.push(`ceiling: ${teto}`)
-  if (esq) partes.push(`windows/doors: ${esq}`)
   if (loucas) partes.push(`fixtures: ${loucas}`)
+
+  // abertura (esquadria) tratada como elemento em destaque, com a cor/material corretos
+  const aberturas = esq
+    ? `The ${esq} is a prominent feature clearly visible in the frame, with the frame colour and material shown accurately; a door with matching frame is also visible`
+    : 'the doors and window frames are clearly visible'
 
   const prompt = [
     `${room.pov} of ${room.en}`,
     partes.join(', '),
+    aberturas,
+    'wide framing that includes the full window and the door, showing the ceiling and floor',
     ESTILO[padrao],
-    'realistic photograph, soft natural daylight, shallow depth of field, architectural interior photography, 4:3, no people, no text, no watermark',
+    'realistic architectural interior photograph, natural daylight coming through the window, accurate materials and colours, 4:3, no people, no text, no watermark',
   ].filter(Boolean).join('. ')
 
   const negative = 'text, watermark, logo, distorted proportions, extra rooms, lowres, cartoon, cluttered, dirty, unrealistic lighting'
