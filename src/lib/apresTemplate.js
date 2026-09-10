@@ -27,6 +27,9 @@ export function montarApresHTML(cfg = {}) {
     comercial = false, projetoVisual = [], baseHref = '',
   } = cfg
 
+  // caminhos de imagem absolutos (Safari não resolve relativo dentro de iframe srcDoc)
+  const A = (p) => (baseHref && p && p.charAt(0) === '/') ? baseHref + p : p
+
   // ---- projeto visual: foto IA de cada ambiente conforme a seleção do cliente ----
   const pvSection = (!comercial && Array.isArray(projetoVisual) && projetoVisual.length) ? `
 <section class="gal" id="s4b">
@@ -56,8 +59,8 @@ export function montarApresHTML(cfg = {}) {
   const heroLead = comercial
     ? 'Do projeto à chave, com engenharia de verdade. Role e veja como a sua casa deixa de ser sonho e vira realidade, no prazo e no preço combinados.'
     : 'Você escolheu construir. A partir daqui, cada linha, cada material e cada data são seus. Role e veja a sua casa deixar de ser sonho e virar projeto.'
-  const galRow = (ids) => ids.map((id) => `<figure><img src="/modelos/${id}.jpg" alt="Modelo MS" loading="lazy"></figure>`).join('')
-  const matRow = (ids) => ids.map((id) => `<figure><img src="/acab/${id}.jpg" alt="Amostra de acabamento" loading="lazy"></figure>`).join('')
+  const galRow = (ids) => ids.map((id) => `<figure><img src="${A('/modelos/'+id+'.jpg')}" alt="Modelo MS" loading="lazy"></figure>`).join('')
+  const matRow = (ids) => ids.map((id) => `<figure><img src="${A('/acab/'+id+'.jpg')}" alt="Amostra de acabamento" loading="lazy"></figure>`).join('')
   const row1 = MODELOS_IDS.slice(0, 8), row2 = MODELOS_IDS.slice(8)
   const mat1 = MAT_TILES.slice(0, 6), mat2 = MAT_TILES.slice(6)
   const dup = (fn, arr) => fn(arr) + fn(arr) // duplica pra marquee contínuo
@@ -222,11 +225,11 @@ section{position:relative;padding:120px 26px;overflow:hidden}
 
 <div class="grain"></div>
 <div class="prog" id="prog"></div>
-<div class="brand"><img src="/apres/logo.png" alt="MS"><span>MS&nbsp;CONSTRUÇÕES&nbsp;INTELIGENTES</span></div>
+<div class="brand"><img src="${A('/apres/logo.png')}" alt="MS"><span>MS&nbsp;CONSTRUÇÕES&nbsp;INTELIGENTES</span></div>
 <div class="cue"><span>Role</span><span class="c">↓</span></div>
 
 <section class="hero" id="s1">
-  <div class="bg" data-par="0.25" style="background-image:url('/apres/cover.jpg')"></div>
+  <div class="bg" data-par="0.25" style="background-image:url('${A('/apres/cover.jpg')}')"></div>
   <div class="veil"></div><div class="sweep"></div>
   <div class="wrap">
     <div class="tagfam rv">${heroTag}</div>
@@ -268,7 +271,7 @@ ${comercial ? `<section class="casa" id="s4">
     <div class="eyebrow rv">A sua casa, do seu jeito</div>
     <h2 class="rv d1" style="margin-top:14px">Escolha o modelo. <span class="amber">A gente constrói.</span></h2>
     <div class="two" style="margin-top:38px">
-      <div class="frame rv d1"><img src="/modelos/m14.jpg" alt="Casa MS"></div>
+      <div class="frame rv d1"><img src="${A('/modelos/m14.jpg')}" alt="Casa MS"></div>
       <div class="rv d2">
         <div class="spec">
           <div class="r"><span class="k">Padrões</span><span class="v">Médio e alto padrão</span></div>
@@ -290,7 +293,7 @@ ${comercial ? `<section class="casa" id="s4">
     <div class="eyebrow rv">A casa que você escolheu no pré-projeto</div>
     <h2 class="rv d1" style="margin-top:14px">A sua <span class="amber">${esc(modeloNome)}</span>.</h2>
     <div class="two" style="margin-top:38px">
-      <div class="frame rv d1">${badge}<img src="${esc(renderSrc)}" alt="${esc(modeloNome)}">${overlay}</div>
+      <div class="frame rv d1">${badge}<img src="${esc(renderSrc.charAt(0)==='/'?A(renderSrc):renderSrc)}" alt="${esc(modeloNome)}">${overlay}</div>
       <div class="rv d2">
         <div class="spec">${specRows}</div>
         ${precoBlock}
@@ -366,17 +369,17 @@ ${pvSection}
       <div class="rv d1">
         <div class="camreal">
           <span class="live" style="position:absolute;left:13px;top:13px;z-index:3"><span class="d"></span>AO VIVO</span>
-          <img src="/apres/camera.jpg" alt="Câmera solar instalada na obra">
+          <img src="${A('/apres/camera.jpg')}" alt="Câmera solar instalada na obra">
         </div>
         <p class="src" style="text-align:center">Câmera solar na obra, transmitindo ao vivo 24 horas por dia.</p>
       </div>
       <div class="rv d2">
-        <div class="browserframe"><div class="bar"><i></i><i></i><i></i><span>prumo · acompanhamento da sua obra</span></div><img src="/apres/prumo1.jpg" alt="Painel Prumo do cliente"></div>
+        <div class="browserframe"><div class="bar"><i></i><i></i><i></i><span>prumo · acompanhamento da sua obra</span></div><img src="${A('/apres/prumo1.jpg')}" alt="Painel Prumo do cliente"></div>
         <p class="src" style="text-align:center">Você recebe um link e vê o percentual e a sua casa tomando forma.</p>
       </div>
     </div>
     <div class="rv d3" style="margin-top:22px">
-      <div class="browserframe"><div class="bar"><i></i><i></i><i></i><span>prumo · linha do tempo</span></div><img src="/apres/prumo2.jpg" alt="Linha do tempo das etapas da obra"></div>
+      <div class="browserframe"><div class="bar"><i></i><i></i><i></i><span>prumo · linha do tempo</span></div><img src="${A('/apres/prumo2.jpg')}" alt="Linha do tempo das etapas da obra"></div>
       <p class="src" style="text-align:center">A cada etapa concluída (fundação, estrutura, cobertura...), ela acende no seu acompanhamento.</p>
     </div>
   </div>
@@ -399,7 +402,7 @@ ${pvSection}
 <section class="cta" id="s9">
   <div class="glow"></div>
   <div class="wrap">
-    <img src="/apres/logo.png" class="rv" style="width:72px;margin:0 auto 18px;display:block">
+    <img src="${A('/apres/logo.png')}" class="rv" style="width:72px;margin:0 auto 18px;display:block">
     <div class="eyebrow rv d1" style="text-align:center">A sua casa já pode ter uma data pra começar</div>
     <div class="big-quote rv d2" style="margin-top:20px">${primeiroNome ? esc(primeiroNome) + ', vamos construir' : 'Vamos construir'}<br>o sonho da <span class="amber">sua casa</span>?</div>
     <p class="lead rv d3" style="margin:24px auto 0;text-align:center">Tudo o que você viu começa com um passo: a assinatura do contrato. A partir dele, o seu sonho começa a se tornar realidade e a casa que você imaginou começa a criar forma. Iniciamos o seu projeto e em poucos dias você vê ele em 3D. E logo o seu lar estará pronto para morar com a sua família.</p>
