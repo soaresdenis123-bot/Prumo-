@@ -7,6 +7,8 @@
 //  todos; só mudam nome, modelo/render, specs, preço e acabamentos escolhidos.
 // =========================================================================
 
+import { ACABIMG } from './acab_img'
+
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
 // amostras de acabamento para a esteira de "cores e materiais"
@@ -60,7 +62,8 @@ export function montarApresHTML(cfg = {}) {
     ? 'Do projeto à chave, com engenharia de verdade. Role e veja como a sua casa deixa de ser sonho e vira realidade, no prazo e no preço combinados.'
     : 'Você escolheu construir. A partir daqui, cada linha, cada material e cada data são seus. Role e veja a sua casa deixar de ser sonho e virar projeto.'
   const galRow = (ids) => ids.map((id) => `<figure><img src="${A('/modelos/'+id+'.jpg')}" alt="Modelo MS" loading="lazy"></figure>`).join('')
-  const matRow = (ids) => ids.map((id) => `<figure><img src="${A('/acab/'+id+'.jpg')}" alt="Amostra de acabamento" loading="lazy"></figure>`).join('')
+  // amostras de acabamento: usa a imagem base64 embutida (sempre disponível no bundle)
+  const matRow = (ids) => ids.map((id) => `<figure><img src="${ACABIMG[id] || A('/acab/'+id+'.jpg')}" alt="Amostra de acabamento" loading="lazy"></figure>`).join('')
   const row1 = MODELOS_IDS.slice(0, 8), row2 = MODELOS_IDS.slice(8)
   const mat1 = MAT_TILES.slice(0, 6), mat2 = MAT_TILES.slice(6)
   const dup = (fn, arr) => fn(arr) + fn(arr) // duplica pra marquee contínuo
