@@ -141,7 +141,7 @@ export default function MonteSuaCasa() {
   return (
     <>{header}
       <div className="content" style={{ maxWidth: 1040, margin: '0 auto' }}>
-        <div className="pg-head" style={{ textAlign: 'center' }}>
+        <div className="pg-head" style={{ display: 'block', textAlign: 'center' }}>
           <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 700 }}>Monte sua casa</div>
           <h1 className="pg" style={{ marginTop: 6 }}>Qual dessas é a sua casa?</h1>
           <div className="pg-sub" style={{ maxWidth: 580, margin: '8px auto 0' }}>Escolha o modelo mais parecido com o que você sonha. Depois monte os ambientes e os acabamentos, vendo cada material.</div>
