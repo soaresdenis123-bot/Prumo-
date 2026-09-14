@@ -4,6 +4,7 @@ import { MODELOS } from '../lib/modelos'
 import { SUPERFICIES, superficiesParaAmbiente, AMBIENTES_BASE, ACAB_POR_ID, custoSuperficie, vendaItem, esquadAreaM2,
   ESQ_DORMITORIO_PADRAO, ESQ_PADRAO,
   TELHADOS_POR_ID, telhadosDisponiveis, areaTelhado, PAISAGISMOS, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
+import { custoAco, areaLajeEntrepiso } from '../lib/custos_sf'
 import { brl } from '../lib/precificacao'
 import PlumbMark from '../components/PlumbMark'
 
@@ -60,7 +61,13 @@ export default function MonteSuaCasa() {
     const telArea = areaTelhado(areaTotal, sobrado)
     const cobCusto = cobItem ? telArea * vendaItem(cobItem) : 0
     const paisCusto = paisagismo ? (PAISAGISMOS_POR_ID[paisagismo]?.venda || 0) : 0
-    const base = areaTotal * BASE_ESTRUTURAL + areaTotal * SERVICOS_M2 + acab + cobCusto + paisCusto
+    // extra de sobrado (motor steel frame): aço do entrepiso + deck + escada, com margem
+    const _pd = Math.round(areaTotal * 2.2), _dv = Math.round(areaTotal * 0.5)
+    const _acoT = custoAco({ areaParedes: _pd, areaDivisorias: _dv, areaLaje: 0 }).total
+    const _lajeEnt = sobrado ? areaLajeEntrepiso(areaTotal, 2) : 0
+    const _acoR = custoAco({ areaParedes: _pd, areaDivisorias: _dv, areaLaje: _lajeEnt }).total
+    const upliftSobrado = sobrado ? Math.round(((_acoR - _acoT) + _lajeEnt * 120 + 9000) * 1.10) : 0
+    const base = areaTotal * BASE_ESTRUTURAL + areaTotal * SERVICOS_M2 + acab + cobCusto + paisCusto + upliftSobrado
     const round = (n) => Math.round(n / 1000) * 1000
     return { areaTotal, acab, cobCusto, paisCusto, total: base, min: round(base * 0.94), max: round(base * 1.1) }
   }, [ambientes, cobertura, paisagismo, sel, tipo, cobItem])
