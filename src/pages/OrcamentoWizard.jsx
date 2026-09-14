@@ -4,6 +4,7 @@ import { SERVICOS, areaDosComodos } from '../lib/precificacao'
 import { MO_PCT_PADRAO, MO_MIN, MO_MAX, MARGEM_PCT_PADRAO, custoInstalado, precoVenda, margemDe } from '../lib/custos'
 import { parseSelecoes, ACAB_POR_ID, COEF, esquadAreaM2, SUPERFICIES, superficiesParaAmbiente, AMBIENTES_BASE,
   ESQ_DORMITORIO_PADRAO, ESQ_PADRAO, telhadosDisponiveis, TELHADOS_POR_ID, PAISAGISMOS, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
+import { custoAco, areaParedeExterna, revestimentoExterno, LINHAS, ACO } from '../lib/custos_sf'
 
 let ACID = 1 // id incremental dos ambientes montados no wizard
 
@@ -110,12 +111,23 @@ function gerarProjeto(cfg) {
   const tSel = cfg.telhadoTier ?? 1
   // cada push usa coef = quantidade absoluta já calculada (footprint, área, etc.)
   const P = []
+  // --- OBRA CINZA (motor steel frame calibrado — custos_sf) ---
+  const _paredes = Math.round(A * 2.2)          // m² de paredes (ext + int, aprox)
+  const _divis = Math.round(A * 0.5)            // m² de divisórias
+  const _lajeEnt = sobrado ? footprint : 0      // entrepiso: só sobrado (puxa o aço)
+  const _aco = custoAco({ areaParedes: _paredes, areaDivisorias: _divis, areaLaje: _lajeEnt })
+  const _extWall = sobrado ? Math.round(areaParedeExterna(footprint) * 2) : Math.round(areaParedeExterna(A))
+  const _rev = revestimentoExterno(_extWall)
   P.push(AU('Limpeza do terreno / terraplanagem', 'm²', footprint, 25, '', true, 'Preliminares'))
-  P.push(AU('Fundação — radier', 'm²', footprint, 540, '', true, 'Fundação'))
-  P.push(AU('Kit estrutura steel frame', 'm²', A, 380, '', true, 'Estrutura'))
-  P.push(AU('Montagem da estrutura (mão de obra)', 'm²', A, 120, '', true, 'Estrutura'))
-  P.push(AU('Fechamento (OSB + placa cimentícia + isolamento)', 'm²', Math.round(A * 1.1), 200, '', true, 'Fechamento'))
-  if (sobrado) { P.push(AU('Entrepiso (laje seca / wall)', 'm²', footprint, 208, '', true, 'Estrutura')); P.push(CH('Escada', 'un', 1, [T('Concreto revestido', 6000), T('Madeira', 9000), T('Metálica / vidro', 15000)], '', true, 'Estrutura')) }
+  P.push(AU('Fundação — radier (FCK30, malha dupla, treliça H8)', 'm²', footprint, Math.round(LINHAS.radier.valor), '', true, 'Fundação'))
+  P.push(AU('Estrutura em aço — perfis galvanizados (' + _aco.kg + ' kg)', 'kg', _aco.kg, ACO.material_kg, '', true, 'Estrutura'))
+  P.push(AU('Montagem da estrutura — mão de obra do montador', 'kg', _aco.kg, ACO.mo_kg, '', true, 'Estrutura'))
+  if (sobrado) { P.push(AU('Entrepiso — deck (OSB + cimentícia)', 'm²', footprint, 120, '', true, 'Estrutura')); P.push(CH('Escada', 'un', 1, [T('Concreto revestido', 6000), T('Madeira', 9000), T('Metálica / vidro', 15000)], '', true, 'Estrutura')) }
+  // fechamento externo — sistema cimentício detalhado (material + mão de obra)
+  P.push(AU('Fechamento externo — mão de obra + estrutura de fixação', 'm²', _extWall, Math.round(LINHAS.fechamentoExterno.mo), '', true, 'Fechamento'))
+  _rev.itens.forEach((m) => P.push(AU('Fechamento ext. — ' + m.nome, m.un, m.qtd, m.preco_un, '', true, 'Fechamento')))
+  // fechamento interno
+  P.push(AU('Fechamento interno (gesso acartonado + lã PET + junta)', 'm²', Math.round(A * 1.6), Math.round(LINHAS.fechamentoInterno.valor), '', true, 'Fechamento'))
   P.push(CH('Cobertura / telhado', 'm²', telhadoArea, [T('Fibrocimento', 85), T('Cerâmico', 169), T('Shingle / metálico', 215)], '', true, 'Cobertura'))
   P[P.length - 1].sel = tSel
   P.push(AU('Manta / subcobertura + calhas', 'm²', telhadoArea, 33, '', true, 'Cobertura'))
