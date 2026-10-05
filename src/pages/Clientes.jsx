@@ -3,11 +3,26 @@ import { useNavigate } from 'react-router-dom'
 import { listLeadsProjeto, updateLead, deleteLead, uploadApresRender, salvarApres, gerarProjetoVisual } from '../lib/data'
 import { montarPromptAmbiente } from '../lib/roomPrompt'
 import { MODELO_IMG } from '../lib/modelos'
-import { parseSelecoes, SUPERFICIES, ACAB_POR_ID, custoSuperficie } from '../lib/acabamentos'
+import { parseSelecoes, SUPERFICIES, ACAB_POR_ID, custoSuperficie, TELHADOS_POR_ID, PAISAGISMOS_POR_ID } from '../lib/acabamentos'
 import { brl } from '../lib/precificacao'
 
 const STATUS = { novo: 'Novo', contatado: 'Contatado', arquivado: 'Arquivado' }
 const inp = { width: '100%', padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface,#fff)', color: 'var(--ink)', fontSize: 13.5 }
+
+// --- rótulos legíveis para os slugs vindos do "Monte sua casa" ---
+const TIPO_LBL = { terrea: 'Térrea', sobrado: '2 pavimentos' }
+const PADRAO_LBL = { medio: 'Padrão médio', alto: 'Padrão alto' }
+const TELHADO_LBL = { platibanda: 'Platibanda', aparente: 'Telhado aparente' }
+// extrai só a nota livre que o cliente escreveu (entre "Obs:" e o bloco técnico [[SEL]])
+const notaCliente = (obs) => { const m = String(obs || '').match(/·\s*Obs:\s*([\s\S]*?)\s*·\s*\[\[SEL\]\]/); return m ? m[1].trim() : '' }
+// link clicável do contato (WhatsApp ou e-mail)
+const contatoHref = (c) => {
+  if (!c) return ''
+  const t = String(c).trim()
+  if (t.includes('@')) return 'mailto:' + t
+  const d = t.replace(/\D/g, '')
+  return d.length >= 8 ? 'https://wa.me/' + d : ''
+}
 
 export default function Clientes() {
   const nav = useNavigate()
@@ -127,52 +142,88 @@ export default function Clientes() {
         </div>
 
         {data.length === 0 ? (
-          <div className="muted" style={{ fontSize: 13 }}>{isLeads ? 'Nenhum lead ainda. Divulgue o link /monte-sua-casa.' : 'Nenhum cliente ainda. Nos leads, clique “Virou cliente”.'}</div>
+          <div className="muted" style={{ fontSize: 13 }}>{isLeads ? 'Nenhum lead ainda. Divulgue o link /monte-sua-casa.' : 'Nenhum cliente ainda. Nos leads, clique “✓ Virar cliente”.'}</div>
         ) : (
-          <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
-              <thead><tr>{['Quando', 'Nome', 'Contato', 'Cidade', 'Modelo', 'Quer', 'Status', ''].map((h) => (
-                <th key={h} style={{ textAlign: 'left', fontSize: 10.5, textTransform: 'uppercase', color: 'var(--ink3)', fontWeight: 700, padding: '11px 14px', borderBottom: '1px solid var(--line)' }}>{h}</th>
-              ))}</tr></thead>
-              <tbody>
-                {data.map((l) => (
-                  <tr key={l.id} style={{ borderBottom: '1px solid var(--line2)' }}>
-                    <td className="mono" style={{ padding: '10px 14px', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmt(l.criado_em)}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 600, fontSize: 13 }}>{l.nome || '—'}</td>
-                    <td style={{ padding: '10px 14px', fontSize: 13 }}>{l.contato || '—'}</td>
-                    <td className="muted" style={{ padding: '10px 14px', fontSize: 12.5 }}>{l.cidade || '—'}</td>
-                    <td style={{ padding: '10px 14px', width: 150 }}>
-                      {MODELO_IMG[l.modelo]
-                        ? <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><img src={MODELO_IMG[l.modelo]} alt={l.modelo} style={{ width: 64, height: 42, objectFit: 'cover', borderRadius: 7, border: '1px solid var(--line)' }} /><span style={{ fontSize: 11.5, fontWeight: 600 }}>{l.modelo}</span></div>
-                        : <span className="muted" style={{ fontSize: 12 }}>{l.modelo || '— sem modelo'}</span>}
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: 12 }}>
-                      <div className="muted">{[l.tipo === 'sobrado' ? '2 pav.' : l.tipo === 'terrea' ? 'térrea' : '', l.telhado, l.padrao].filter(Boolean).join(' · ')}</div>
-                      {l.obs && <div style={{ marginTop: 3, maxWidth: 360 }}>{l.obs}</div>}
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <select value={l.status} onChange={(e) => status(l.id, e.target.value)} className={'pill ' + (l.status === 'novo' ? 'prog' : l.status === 'contatado' ? 'ok' : 'pend')} style={{ border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                        {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                      </select>
-                    </td>
-                    <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        {isLeads
-                          ? <>
-                              <button className="btn" style={{ fontSize: 11.5, padding: '5px 10px' }} onClick={() => nav('/orcamento', { state: { lead: l } })} title="Fazer orçamento detalhado">📄 Orçamento</button>
-                              <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 9px' }} onClick={() => tornarCliente(l)} title="Marcar como cliente">✓ Cliente</button>
-                            </>
-                          : <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 10px' }} onClick={() => voltarLead(l)} title="Voltar para leads">↩ Lead</button>}
-                        {parseSelecoes(l.obs) && <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 9px' }} onClick={() => setVerSel(l)} title="Ver materiais que o cliente escolheu">🖼 Seleção</button>}
-                        <button className="btn ghost" style={{ fontSize: 11.5, padding: '5px 9px' }} onClick={() => { setCopiado(false); setApres(l) }} title="Gerar e compartilhar a apresentação deste cliente">🎬 Apresentação</button>
-                        <button className="muted" title="Editar" onClick={() => setEdit({ ...l })} style={{ fontSize: 15, cursor: 'pointer' }}>✏️</button>
-                        <button className="muted" title="Excluir" onClick={() => remover(l)} style={{ fontSize: 16, cursor: 'pointer', color: 'var(--crit,#b23)' }}>×</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
+            {data.map((l) => {
+              const s = parseSelecoes(l.obs)
+              const nota = notaCliente(l.obs)
+              const tipoTxt = TIPO_LBL[s?.tipo || l.tipo] || null
+              const padraoTxt = PADRAO_LBL[s?.padrao || l.padrao] || null
+              const telhadoTxt = TELHADO_LBL[s?.telhado || l.telhado] || null
+              const cobTxt = s?.cobertura && TELHADOS_POR_ID[s.cobertura]?.nome
+              const paisTxt = s?.paisagismo && PAISAGISMOS_POR_ID[s.paisagismo]?.nome
+              const nAmb = s?.ambientes?.length || 0
+              const chips = [
+                s?.areaTotal && `${s.areaTotal} m²`,
+                tipoTxt, padraoTxt, telhadoTxt, cobTxt,
+                nAmb ? `${nAmb} ambiente${nAmb > 1 ? 's' : ''}` : null,
+                paisTxt,
+              ].filter(Boolean)
+              const href = contatoHref(l.contato)
+              return (
+                <div key={l.id} className="card" style={{ padding: 14, display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  {/* miniatura do modelo */}
+                  {MODELO_IMG[l.modelo]
+                    ? <img src={MODELO_IMG[l.modelo]} alt={l.modelo} style={{ width: 84, height: 60, objectFit: 'cover', borderRadius: 9, border: '1px solid var(--line)', flex: '0 0 auto' }} />
+                    : <div style={{ width: 84, height: 60, borderRadius: 9, border: '1px solid var(--line)', background: 'var(--surface2)', display: 'grid', placeItems: 'center', flex: '0 0 auto', fontSize: 10.5, color: 'var(--ink3)', textAlign: 'center', lineHeight: 1.2 }}>sem<br />modelo</div>}
+
+                  {/* corpo */}
+                  <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 15 }}>{l.nome || '— sem nome'}</span>
+                      {l.modelo && <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--accent2)', background: 'var(--accent-bg)', padding: '2px 9px', borderRadius: 20 }}>{l.modelo}</span>}
+                      <span className="muted" style={{ fontSize: 12, marginLeft: 'auto', whiteSpace: 'nowrap' }}>{fmt(l.criado_em)}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--ink2)', marginTop: 5 }}>
+                      {l.contato && (href
+                        ? <a href={href} target="_blank" rel="noreferrer" style={{ color: 'var(--ink2)', textDecoration: 'none' }}>✆ {l.contato}</a>
+                        : <span>✆ {l.contato}</span>)}
+                      {l.cidade && <span>◎ {l.cidade}</span>}
+                    </div>
+                    {chips.length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                        {chips.map((c, i) => (
+                          <span key={i} style={{ fontSize: 11.5, fontWeight: 600, color: i === 0 ? 'var(--accent2)' : 'var(--ink2)', background: i === 0 ? 'var(--accent-bg)' : 'var(--surface2)', border: i === 0 ? 'none' : '1px solid var(--line)', padding: '3px 9px', borderRadius: 7 }}>{c}</span>
+                        ))}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                    {s && (
+                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--ink3)', fontWeight: 700 }}>Estimativa</span>
+                        <span style={{ fontSize: 15, fontWeight: 700 }}>{brl(s.estMin)} – {brl(s.estMax)}</span>
+                        <span className="muted" style={{ fontSize: 11 }}>a depender dos materiais</span>
+                      </div>
+                    )}
+                    {nota && (
+                      <div style={{ marginTop: 9, fontSize: 12.5, color: 'var(--ink2)', background: 'var(--surface2)', borderLeft: '3px solid var(--accent)', borderRadius: '0 6px 6px 0', padding: '6px 10px' }}>
+                        <span style={{ color: 'var(--ink3)', fontWeight: 700, fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Nota do cliente · </span>{nota}
+                      </div>
+                    )}
+                    {!s && !nota && l.obs && <div className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>{l.obs}</div>}
+                  </div>
+
+                  {/* ações — sempre visíveis, sem scroll lateral */}
+                  <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'stretch', minWidth: 156 }}>
+                    <select value={l.status} onChange={(e) => status(l.id, e.target.value)} className={'pill ' + (l.status === 'novo' ? 'prog' : l.status === 'contatado' ? 'ok' : 'pend')} style={{ border: 'none', fontWeight: 600, cursor: 'pointer', textAlign: 'center', padding: '6px 10px' }}>
+                      {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                    {isLeads
+                      ? <>
+                          <button className="btn" style={{ fontSize: 12.5, padding: '8px 12px', justifyContent: 'center' }} onClick={() => nav('/orcamento', { state: { lead: l } })} title="Fazer orçamento detalhado">📄 Orçamento</button>
+                          <button className="btn ghost" style={{ fontSize: 12.5, padding: '8px 12px', justifyContent: 'center' }} onClick={() => tornarCliente(l)} title="Marcar como cliente">✓ Virar cliente</button>
+                        </>
+                      : <button className="btn ghost" style={{ fontSize: 12.5, padding: '8px 12px', justifyContent: 'center' }} onClick={() => voltarLead(l)} title="Voltar para leads">↩ Voltar p/ leads</button>}
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 1 }}>
+                      {s && <button className="btn ghost" style={{ fontSize: 11.5, padding: '6px 9px' }} onClick={() => setVerSel(l)} title="Ver materiais escolhidos">🖼 Seleção</button>}
+                      <button className="btn ghost" style={{ fontSize: 11.5, padding: '6px 10px' }} onClick={() => { setCopiado(false); setApres(l) }} title="Apresentação do cliente">🎬</button>
+                      <button className="btn ghost" style={{ fontSize: 13, padding: '6px 10px' }} onClick={() => setEdit({ ...l })} title="Editar">✏️</button>
+                      <button className="btn ghost" style={{ fontSize: 15, padding: '6px 10px', color: 'var(--crit,#b23)' }} onClick={() => remover(l)} title="Excluir">×</button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
