@@ -643,6 +643,35 @@ export async function listGestores() {
   return data || []
 }
 
+// ---- Usuários da equipe (admin) ----
+export async function listarUsuarios() {
+  const { data, error } = await supabase
+    .from('profiles').select('id,nome,email,papel,criado_em').order('criado_em', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+// mudar papel (RLS: admin pode editar qualquer profile)
+export async function setPapelUsuario(id, papel) {
+  const { error } = await supabase.from('profiles').update({ papel }).eq('id', id)
+  if (error) throw error
+}
+
+// chama a Edge Function admin-users e devolve a mensagem de erro legível
+async function chamarAdminUsers(payload) {
+  const { data, error } = await supabase.functions.invoke('admin-users', { body: payload })
+  if (error) {
+    let msg = error.message || 'Erro na função admin-users.'
+    try { const j = await error.context?.json?.(); if (j?.error) msg = j.error } catch { /* noop */ }
+    throw new Error(msg)
+  }
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+export const adminCriarUsuario = (u) => chamarAdminUsers({ action: 'criar', ...u })
+export const adminResetSenha = (id, senha) => chamarAdminUsers({ action: 'senha', id, senha })
+export const adminRemoverUsuario = (id) => chamarAdminUsers({ action: 'remover', id })
+
 // ---- Módulo TIME: times e tarefas ----
 export async function listTimes() {
   const { data, error } = await supabase.from('times').select('*').order('criado_em', { ascending: true })

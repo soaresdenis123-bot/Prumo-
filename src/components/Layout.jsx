@@ -28,9 +28,12 @@ const IconLead = () => (
 const IconTeam = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="7" r="3"/><path d="M2 21v-2a5 5 0 015-5h4a5 5 0 015 5v2"/><path d="M16 3.5a3 3 0 010 5.8M22 21v-2a5 5 0 00-3-4.5"/></svg>
 )
+const IconKey = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/></svg>
+)
 
 export default function Layout({ children }) {
-  const { profile, signOut, isStaff } = useAuth()
+  const { profile, signOut, isStaff, isAdmin } = useAuth()
   const papelLabel = profile.papel === 'admin' ? 'Administrador' : profile.papel === 'gestor' ? 'Gestor de obra' : 'Execução de obra'
   const [novos, setNovos] = useState(0)
   useEffect(() => { if (isStaff) contarLeadsNovos().then(setNovos).catch(() => {}) }, [isStaff])
@@ -54,6 +57,7 @@ export default function Layout({ children }) {
           {isStaff && <NavLink to="/financeiro"><IconFin />Financeiro</NavLink>}
           {isStaff && <NavLink to="/fornecedores"><IconTruck />Fornecedores</NavLink>}
           {isStaff && <NavLink to="/time"><IconTeam />Time</NavLink>}
+          {isAdmin && <NavLink to="/usuarios"><IconKey />Usuários</NavLink>}
         </nav>
         <div className="foot">
           <div className="who">

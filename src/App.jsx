@@ -20,13 +20,14 @@ import MonteSuaCasa from './pages/MonteSuaCasa'
 import Apresentacao from './pages/Apresentacao'
 const Portfolio = lazy(() => import('./pages/Portfolio'))
 import Clientes from './pages/Clientes'
+import Usuarios from './pages/Usuarios'
 
 function Spinner() {
   return <div className="spin" />
 }
 
 function AppGated() {
-  const { session, profile, loading, isStaff } = useAuth()
+  const { session, profile, loading, isStaff, isAdmin } = useAuth()
   if (loading) return <Spinner />
   if (!session) return <Login />
   if (!profile) return <Spinner />
@@ -53,6 +54,7 @@ function AppGated() {
         {isStaff && <Route path="/financeiro" element={<Financeiro />} />}
         {isStaff && <Route path="/financeiro/:id" element={<FinanceiroObra />} />}
         {isStaff && <Route path="/time" element={<Time />} />}
+        {isAdmin && <Route path="/usuarios" element={<Usuarios />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
